@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Bizanc.io.Matching.Core\Bizanc.io.Matching.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NBitcoin" Version="4.1.1.57" />
+    <PackageReference Include="Nethereum.Geth" Version="2.5.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="QBitNinja.Client" Version="1.0.3.47" />
+    <PackageReference Include="RavenDB.Embedded" Version="4.1.2" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>7.2</LangVersion>
+  </PropertyGroup>
+</Project>

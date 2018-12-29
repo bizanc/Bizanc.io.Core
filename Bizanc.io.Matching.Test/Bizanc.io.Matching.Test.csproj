@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+
+    <IsPackable>false</IsPackable>
+    <LangVersion>7.2</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="fluentassertions" Version="4.19.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.7.2" />
+    <PackageReference Include="moq" Version="4.7.145" />
+    <PackageReference Include="restsharp" Version="106.2.2" />
+    <PackageReference Include="xunit" Version="2.3.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.3.1" />
+    <PackageReference Include="System.Collections.Immutable" Version="1.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Bizanc.io.Matching.Core\Bizanc.io.Matching.Core.csproj" />
+    <ProjectReference Include="..\Bizanc.io.Matching.Infra\Bizanc.io.Matching.Infra.csproj" />
+    <ProjectReference Include="..\Bizanc.io.Matching.Api\Bizanc.io.Matching.Api.csproj" />
+  </ItemGroup>
+
+</Project>
