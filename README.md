@@ -1,22 +1,28 @@
 
 
-# Bizancio.Core Ominichain Network
+# Bizanc Blockchain
 
-## What is Bizanc Ominichain Network?
-Bizanc is a Open Source Descentralized Exchange - DEX that enables instant liquidity between assets anywhere in the world.
-Bizanc uses blockchain peer-to-peer technology to operate the booktrading system with no central authority: managing offers, order books, bids, asks, candle (prices, volume), transactions, deposits and withdrawal.
+## What is Bizanc?
+Bizanc is an Open Source Fully Descentralized Exchange - DEX that enables instant liquidity between crypto assets anywhere in the world.
+Bizanc blockchain was developed from scratch, with native crosschain and trade functionalities.  
 
 More information: 
-website - http://bizanc.io
-whitepaper - http://bizanc.io/wp
+website - https://bizanc.io
+block explorer - https://bizanc.io/explorer
+wallet - https://bizanc.io/wallet
+market - https://bizanc.io/market
+whitepaper - https://bizanc.io/documentos/Bizanc-whitepaper-draft.pdf
+API - https://bizanc.io/api
+API docs - https://bizanc.io/api-docs/index.html
+
 
 ## What Bizanc Ominichain Network makes possible ?
 - Asset Trading
 - Exchange White Label
+- Integrated Market
 - Asset Tokenization
-- Access Underbanked People
-- Conversion between crypto and fiatmoney
-- Payments, loans and "bank" credit
+- Bitcoin and Ethereum
+- Payments
 
 # Documentation
 
@@ -25,11 +31,11 @@ whitepaper - http://bizanc.io/wp
 ### Run - Docker
 
 ```
-git clone https://http://bitbucket.org/leandro_lustosa/bizancio.core.git
-cd bizancio.core
+git clone https://github.com/bizanc/Bizanc.io.Core.git
+cd Bizanc.io.Core
 docker-compose -f docker-compose.yml up -d --build
 ```
-To test the application locally, the blockchain generates a Public key / Private key with funds, to get those keys follow the instructions bellow: 
+To test the application locally, the blockchain generates a Public key / Private key to mine, to get those keys follow the instructions bellow: 
 
 ``` 
 docker logs -f "container_hash_id"
@@ -45,8 +51,8 @@ docker-compose -f docker-compose.yml down
 ### DEBUG Start - VScode
 
 ```
-git clone https://http://bitbucket.org/leandro_lustosa/bizancio.core.git
-cd bizancio.core
+git clone https://github.com/bizanc/Bizanc.io.Core.git
+cd Bizanc.io.Core
 ```
 On VScode, click on Debug (ctrl + shift + D) and click on green flag to start the process
 
@@ -61,7 +67,7 @@ On VScode, click on Debug (ctrl + shift + D) and click on red flag (shift + f5) 
 ### API Docs
 
 To get the complete documentation about Bizanc API, please go to our swagger
-bizanc.io/docs
+https://bizanc.io/api-docs/index.html
 
 ### API URL`s
 BASE: 
