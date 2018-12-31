@@ -3,29 +3,19 @@
 # Bizanc Blockchain
 
 ## What is Bizanc?
-Bizanc is an Open Source Fully Descentralized Exchange - DEX that enables instant liquidity between crypto assets anywhere in the world.
-Bizanc blockchain was developed from scratch, with native crosschain and trade functionalities.  
+Bizanc is a decentralized platform for commercialization of digital assets, operating on a Blockchain architecture, allowing trading of cryptocurrencies such as Bitcoin, Ether and Tokens of the Ethereum network, as well as the issuance of Tokens within the Bizanc network itself. The platform aims to enable, in addition to a market of strictly digital assets, the tokenization and negotiation of conventional tangible and financial assets, such as: bonds, commodities, derivatives, reward and loyalty program points, and other fiduciary currencies. The decentralized structure of the Bizanc network confers a highly resilient, superior environment in availability and security by eliminating single points of failure, and reducing transaction costs compared to conventional solutions. Bizanc aims to provide greater liquidity to cryptocurrencies and accelerate the adoption of decentralized solutions by the market.
 
 More information: 
-website - https://bizanc.io
-block explorer - https://bizanc.io/explorer
-wallet - https://bizanc.io/wallet
-market - https://bizanc.io/market
-whitepaper - https://bizanc.io/documentos/Bizanc-whitepaper-draft.pdf
-API - https://bizanc.io/api
-API docs - https://bizanc.io/api-docs/index.html
+- website - https://bizanc.io
+- block explorer - https://bizanc.io/explorer
+- wallet - https://bizanc.io/wallet
+- market - https://bizanc.io/market
+- whitepaper draft (Not Technical) - https://bizanc.io/documentos/Bizanc-whitepaper-draft.pdf
+- API - https://bizanc.io/api
+- API docs - https://bizanc.io/api-docs/index.html
 
-
-## What Bizanc Ominichain Network makes possible ?
-- Asset Trading
-- Exchange White Label
-- Integrated Market
-- Asset Tokenization
-- Bitcoin and Ethereum
-- Payments
 
 The platform development is ongoing, testnet is planned to start February 2019.
-
 
 # Documentation
 
