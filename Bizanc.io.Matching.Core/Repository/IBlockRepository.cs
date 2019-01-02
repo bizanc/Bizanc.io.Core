@@ -17,9 +17,9 @@ namespace Bizanc.io.Matching.Core.Repository
 
         Task SavePersistInfo(BlockPersistInfo info);
 
-        Task DeletePersistInfo(string blockHash);
+        Task CleanPersistInfo();
 
-        Task<BlockPersistInfo> GetPersistInfo();
+        Task<List<BlockPersistInfo>> GetPersistInfo();
 
         Task<Stats> GetBlockStats();
     }

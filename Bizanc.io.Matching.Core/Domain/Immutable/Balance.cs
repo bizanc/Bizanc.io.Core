@@ -12,6 +12,8 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
 
         public string Id { get; set; }
 
+        public DateTime Timestamp { get; set; }
+
         public Balance()
         { }
 

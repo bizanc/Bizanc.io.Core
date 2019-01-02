@@ -127,21 +127,27 @@ namespace Bizanc.io.Matching.Core.Domain
 
             Console.WriteLine("Initiling Empty Chain");
 
-            var persistInfo = await blockRepository.GetPersistInfo();
+            var persistPoints = (await blockRepository.GetPersistInfo()).OrderBy(p => p.TimeStamp).ToList();
+            var balances = await balanceRepository.Get();
+            var books = await bookRepository.Get();
 
-            if (persistInfo == null)
+            if (persistPoints == null || persistPoints.Count == 0)
                 chain = new Chain();
             else
             {
-                var block = await blockRepository.Get(persistInfo.BlockHash);
-                var lastBLock = await blockRepository.Get(block.PreviousHashStr);
-                var balance = await balanceRepository.Get(persistInfo.BlockHash);
-                var book = await bookRepository.Get(persistInfo.BlockHash);
-                var transact = new Immutable.TransactionManager(balance);
-                book = new Immutable.Book(book, transact);
-                var deposit = new Immutable.Deposit(null, transact);
-                var withdrawal = new Immutable.Withdrawal(null, transact);
-                chain = new Chain(null, transact, deposit, withdrawal, book, block, lastBLock, new Immutable.Pool());
+                foreach (var persistInfo in persistPoints)
+                {
+                    var block = await blockRepository.Get(persistInfo.BlockHash);
+                    var lastBLock = await blockRepository.Get(block.PreviousHashStr);
+                    var balance = balances.Where(b => b.BlockHash == persistInfo.BlockHash).First();
+                    var book = books.Where(b => b.BlockHash == persistInfo.BlockHash).First();
+                    var transact = new Immutable.TransactionManager(balance);
+                    book = new Immutable.Book(book, transact);
+                    var deposit = new Immutable.Deposit(null, transact);
+                    var withdrawal = new Immutable.Withdrawal(null, transact);
+                    chain = new Chain(chain, transact, deposit, withdrawal, book, block, lastBLock, new Immutable.Pool());
+                    chain.Persisted = true;
+                }
             }
 
             await chain.Initialize(wallet.PublicKey);
@@ -363,9 +369,9 @@ namespace Bizanc.io.Matching.Core.Domain
                     Console.WriteLine("Cleaning persist point " + persistPoint.CurrentBlock.PreviousHashStr);
                     try
                     {
-                        await balanceRepository.Delete(persistPoint.CurrentBlock.PreviousHashStr);
-                        await bookRepository.Delete(persistPoint.CurrentBlock.PreviousHashStr);
-                        await blockRepository.DeletePersistInfo(persistPoint.CurrentBlock.PreviousHashStr);
+                        await balanceRepository.Clean();
+                        await bookRepository.Clean();
+                        await blockRepository.CleanPersistInfo();
                     }
                     catch (Exception e)
                     {
@@ -639,37 +645,40 @@ namespace Bizanc.io.Matching.Core.Domain
             while (await PersistStream.Reader.WaitToReadAsync())
             {
                 var pChain = await PersistStream.Reader.ReadAsync();
-                try
+                if (!pChain.Persisted)
                 {
-                    await persistLock.EnterWriteLock();
-                    var chainData = pChain.Get(40);
-
-                    if (chainData != null)
+                    try
                     {
-                        Console.WriteLine("Persisting block " + pChain.CurrentBlock.Header.Depth);
+                        await persistLock.EnterWriteLock();
+                        var chainData = pChain.Get(40);
 
-                        await blockRepository.Save(chainData.CurrentBlock);
-
-                        await depositRepository.Save(chainData.CurrentBlock.Deposits);
-                        await offerRepository.Save(chainData.BookManager.ProcessedOffers);
-                        await offerRepository.SaveCancel(chainData.CurrentBlock.OfferCancels);
-                        await transactionRepository.Save(chainData.CurrentBlock.Transactions);
-                        await withdrawalRepository.Save(chainData.CurrentBlock.Withdrawals);
-                        await tradeRepository.Save(chainData.BookManager.Trades);
-
-                        if (chainData.CurrentBlock.PreviousHashStr != "")
+                        if (chainData != null)
                         {
-                            await balanceRepository.Save(chainData.TransactManager.Balance);
-                            await bookRepository.Save(chainData.BookManager);
-                            await blockRepository.SavePersistInfo(new BlockPersistInfo() { BlockHash = chainData.CurrentBlock.HashStr, TimeStamp = DateTime.Now });
-                        }
+                            Console.WriteLine("Persisting block " + pChain.CurrentBlock.Header.Depth);
 
-                        Cleanup(pChain);
+                            await blockRepository.Save(chainData.CurrentBlock);
+
+                            await depositRepository.Save(chainData.CurrentBlock.Deposits);
+                            await offerRepository.Save(chainData.BookManager.ProcessedOffers);
+                            await offerRepository.SaveCancel(chainData.CurrentBlock.OfferCancels);
+                            await transactionRepository.Save(chainData.CurrentBlock.Transactions);
+                            await withdrawalRepository.Save(chainData.CurrentBlock.Withdrawals);
+                            await tradeRepository.Save(chainData.BookManager.Trades);
+
+                            if (chainData.CurrentBlock.PreviousHashStr != "")
+                            {
+                                await balanceRepository.Save(chainData.TransactManager.Balance);
+                                await bookRepository.Save(chainData.BookManager);
+                                await blockRepository.SavePersistInfo(new BlockPersistInfo() { BlockHash = chainData.CurrentBlock.HashStr, TimeStamp = DateTime.Now });
+                            }
+
+                            Cleanup(pChain);
+                        }
                     }
-                }
-                finally
-                {
-                    persistLock.ExitWriteLock();
+                    finally
+                    {
+                        persistLock.ExitWriteLock();
+                    }
                 }
             }
         }

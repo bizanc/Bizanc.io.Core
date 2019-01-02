@@ -21,6 +21,8 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
 
         public ImmutableList<Trade> Trades { get; private set; } = new List<Trade>().ToImmutableList();
 
+        public DateTime Timestamp { get; set; }
+
         public string BlockHash { get; set; }
 
         public Book()

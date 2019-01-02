@@ -39,37 +39,24 @@ namespace Bizanc.io.Matching.Infra.Repository
             }
         }
 
-        public async Task DeletePersistInfo(string blockHash)
+        public async Task CleanPersistInfo()
         {
             using (var s = Store.OpenAsyncSession())
             {
-                string id = await s.Query<BlockPersistInfo>().Where(b => b.BlockHash == blockHash).Select(bl => bl.Id).FirstOrDefaultAsync();
-                if (!string.IsNullOrEmpty(id))
+                var points = await s.Query<BlockPersistInfo>().Select(bl => new { id = bl.Id, timestap = bl.TimeStamp }).ToListAsync();
+                if (points != null && points.Count > 20)
+                    points = points.OrderBy(p => p.timestap).ToList();
+                while (points.Count > 20)
                 {
-                    s.Delete(id);
-                    await s.SaveChangesAsync();
+                    var id = points[0].id;
+                    if (!string.IsNullOrEmpty(id))
+                    {
+                        s.Delete(id);
+                        await s.SaveChangesAsync();
+                    }
+                    points.RemoveAt(0);
                 }
             }
-
-            CleanIndexes();
-        }
-
-        private async void CleanIndexes()
-        {
-            IndexDefinition index = await Store.Maintenance.SendAsync(new GetIndexOperation("Auto/BlockPersistInfos/ByTimeStamp"));
-
-            if (index != null)
-                await Store.Maintenance.SendAsync(new DisableIndexOperation("Auto/BlockPersistInfos/ByTimeStamp"));
-
-            index = await Store.Maintenance.SendAsync(new GetIndexOperation("Auto/BlockPersistInfos/ByBlockHashAndTimeStamp"));
-
-            if (index != null)
-                await Store.Maintenance.SendAsync(new DisableIndexOperation("Auto/BlockPersistInfos/ByBlockHashAndTimeStamp"));
-
-            index = await Store.Maintenance.SendAsync(new GetIndexOperation("Auto/BlockPersistInfos/ByBlockHash"));
-
-            if (index != null)
-                await Store.Maintenance.SendAsync(new DisableIndexOperation("Auto/BlockPersistInfos/ByBlockHash"));
         }
 
         public async Task<Block> Get(string blockHash)
@@ -106,10 +93,10 @@ namespace Bizanc.io.Matching.Infra.Repository
             }
         }
 
-        public async Task<BlockPersistInfo> GetPersistInfo()
+        public async Task<List<BlockPersistInfo>> GetPersistInfo()
         {
             using (var s = Store.OpenAsyncSession())
-                return await s.Query<BlockPersistInfo>().OrderByDescending(i => i.TimeStamp).FirstOrDefaultAsync();
+                return await s.Query<BlockPersistInfo>().ToListAsync();
         }
 
         public async Task<Stats> GetBlockStats()

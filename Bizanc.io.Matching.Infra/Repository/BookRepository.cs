@@ -14,34 +14,30 @@ namespace Bizanc.io.Matching.Infra.Repository
 {
     public class BookRepository : BaseRepository<Book>, IBookRepository
     {
-        public async Task<Book> Get(string blockHash)
+        public async Task<List<Book>> Get()
         {
             using (var s = Store.OpenAsyncSession())
-                return await s.Query<Book>().Where(b => b.BlockHash == blockHash)
-                .FirstOrDefaultAsync();
+                return await s.Query<Book>().ToListAsync();
         }
 
-        public async Task Delete(string blockHash)
+        public async Task Clean()
         {
             using (var s = Store.OpenAsyncSession())
             {
-                string id = await s.Query<Book>().Where(b => b.BlockHash == blockHash).Select(bl => bl.Id).FirstOrDefaultAsync();
-                if (!string.IsNullOrEmpty(id))
+                var points = await s.Query<Book>().Select(bl => new { id = bl.Id, timestap = bl.Timestamp }).ToListAsync();
+                if (points != null && points.Count > 20)
+                    points = points.OrderBy(p => p.timestap).ToList();
+                while (points.Count > 20)
                 {
-                    s.Delete(id);
-                    await s.SaveChangesAsync();
+                    var id = points[0].id;
+                    if (!string.IsNullOrEmpty(id))
+                    {
+                        s.Delete(id);
+                        await s.SaveChangesAsync();
+                    }
+                    points.RemoveAt(0);
                 }
             }
-
-            CleanIndexes();
-        }
-
-        private async void CleanIndexes()
-        {
-            IndexDefinition index = await Store.Maintenance.SendAsync(new GetIndexOperation("Auto/Books/ByBlockHash"));
-
-            if (index != null)
-                await Store.Maintenance.SendAsync(new DisableIndexOperation("Auto/Books/ByBlockHash"));
         }
     }
 }

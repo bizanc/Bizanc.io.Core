@@ -38,11 +38,11 @@ namespace Bizanc.io.Matching.Infra.Connector
         public async Task<IEnumerable<Deposit>> Start()
         {
             var eth = await LoadETH();
-            var btc = await LoadBTC();
+            //var btc = await LoadBTC();
             ProcessEth();
-            ProcessBtc();
+            //ProcessBtc();
 
-            eth.AddRange(btc);
+            //eth.AddRange(btc);
             return eth;
         }
 

@@ -38,6 +38,8 @@ namespace Bizanc.io.Matching.Core.Domain
         public DateTime Timestamp { get; private set; } = DateTime.Now;
         private SemaphoreSlim commitLocker = new SemaphoreSlim(1, 1);
 
+        public bool Persisted { get; set; } = false;
+
         public Chain()
         {
 
@@ -597,7 +599,9 @@ namespace Bizanc.io.Matching.Core.Domain
                             Mining = false;
                             Mined = true;
                             transact.Balance.BlockHash = result.HashStr;
+                            transact.Balance.Timestamp = result.Timestamp;
                             book.BlockHash = result.HashStr;
+                            book.Timestamp = result.Timestamp;
                             return new Chain(this, transact, deposit, withdrawal, book, result, CurrentBlock, Pool);
                         }
                     }
@@ -988,7 +992,9 @@ namespace Bizanc.io.Matching.Core.Domain
                     Console.WriteLine("Block references last block, appending");
                     Mining = false;
                     transact.Balance.BlockHash = block.HashStr;
+                    transact.Balance.Timestamp = block.Timestamp;
                     book.BlockHash = block.HashStr;
+                    book.Timestamp = block.Timestamp;
                     return new Chain(this, transact, deposit, withdrawal, book, block, CurrentBlock, Pool);
                 }
             }
