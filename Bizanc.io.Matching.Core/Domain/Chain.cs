@@ -802,12 +802,6 @@ namespace Bizanc.io.Matching.Core.Domain
                 return new Chain(this, block, Pool);
             }
 
-            if (block.Timestamp <= CurrentBlock.Timestamp || block.Timestamp > DateTime.Now.ToUniversalTime())
-            {
-                Console.WriteLine("Block with invalid timestamp");
-                return null;
-            }
-
             Console.WriteLine("Ceirifying dificulty");
 
             var lastDeth = this.GetLastBlockDepth();
@@ -843,6 +837,12 @@ namespace Bizanc.io.Matching.Core.Domain
                 Console.WriteLine("PreviusBlockHash " + Base58.Bitcoin.Encode(new Span<Byte>(block.Header.PreviousBlockHash)));
                 Console.WriteLine("LastBlockHash " + Base58.Bitcoin.Encode(new Span<Byte>(CurrentBlock.Header.Hash)));
 
+                return null;
+            }
+
+            if (block.Timestamp < CurrentBlock.Timestamp || block.Timestamp > DateTime.Now.ToUniversalTime())
+            {
+                Console.WriteLine("Block with invalid timestamp");
                 return null;
             }
 
