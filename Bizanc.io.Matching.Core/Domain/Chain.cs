@@ -228,7 +228,7 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             var result = new List<Offer>();
 
-            if (count < 17 && Previous != null)
+            if (Previous != null)
                 result.AddRange(Previous.GetProcessedOffers(wallet, ++count));
 
             if (CurrentBlock != null)
@@ -241,7 +241,7 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             var result = new List<Trade>();
 
-            if (count < 17 && Previous != null)
+            if (Previous != null)
                 result.AddRange(Previous.GetTrades(asset, ++count));
 
             result.AddRange(BookManager.GetTrades(asset));
@@ -909,6 +909,8 @@ namespace Bizanc.io.Matching.Core.Domain
                             return null;
                         }
                     }
+
+                    clone.Trades = of.Trades;
 
                     root = CryptoHelper.Hash(Base58.Bitcoin.Encode(new Span<Byte>(root)) + clone.ToString());
                 }
