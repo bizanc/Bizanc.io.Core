@@ -877,7 +877,11 @@ namespace Bizanc.io.Matching.Core.Domain
             Console.WriteLine("Received block message");
             foreach (var block in blockResponse.Blocks)
             {
-                await ProcessBlock(block);
+                if (await ProcessBlock(block))
+                {
+                    Console.WriteLine("Received newer block");
+                    Notify(block);
+                }
             }
 
             if (blockResponse.End)
