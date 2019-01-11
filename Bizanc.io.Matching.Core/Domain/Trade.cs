@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace Bizanc.io.Matching.Core.Domain
 {
@@ -50,6 +51,13 @@ namespace Bizanc.io.Matching.Core.Domain
                     this.Quantity == trade.Quantity &&
                     this.Seller == trade.Seller &&
                     this.SellerWallet == trade.SellerWallet;
+        }
+
+        public override string ToString()
+        {
+            return Asset + DtTrade.ToUniversalTime().Ticks + Buyer + BuyerWallet +
+                Seller + SellerWallet + Quantity.ToString("0.0000000000000000000000000", CultureInfo.GetCultureInfo("En-US")) +
+                Price.ToString("0.0000000000000000000000000", CultureInfo.GetCultureInfo("En-US"));
         }
     }
 }
