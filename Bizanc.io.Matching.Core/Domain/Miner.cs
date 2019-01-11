@@ -1493,7 +1493,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     candle.Close = trade.Price;
                     if (trade.Price > candle.High) { candle.High = trade.Price; }
                     if (trade.Price < candle.Low || candle.Low == 0) { candle.Low = trade.Price; }
-                    candle.Volume += trade.Quantity;
+                    candle.Volume += trade.Quantity * trade.Price;
                 }
                 else
                 {
