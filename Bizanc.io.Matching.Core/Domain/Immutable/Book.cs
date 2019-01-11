@@ -134,6 +134,9 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
                 {
                     clone.Finish();
                     ellegibles.Add(clone);
+                    foreach(var t in clone.Trades)
+                        root = CryptoHelper.Hash(Base58.Bitcoin.Encode(new Span<Byte>(root)) + t.ToString());
+                        
                     root = CryptoHelper.Hash(Base58.Bitcoin.Encode(new Span<Byte>(root)) + clone.ToString());
                 }
             }

@@ -908,6 +908,8 @@ namespace Bizanc.io.Matching.Core.Domain
                             Console.WriteLine("Block with invalid trade");
                             return null;
                         }
+
+                        root = CryptoHelper.Hash(Base58.Bitcoin.Encode(new Span<Byte>(root)) + t.ToString());
                     }
 
                     clone.Trades = of.Trades;
