@@ -899,6 +899,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
             Console.WriteLine("Validating book");
             var book = new Book(BookManager, transact);
+            var trades = new List<Trade>();
             if (block.OffersDictionary.Count > 0)
             {
                 foreach (var of in block.Offers)
@@ -935,10 +936,13 @@ namespace Bizanc.io.Matching.Core.Domain
                     }
 
                     clone.Trades = of.Trades;
+                    trades.AddRange(of.Trades);
 
                     root = CryptoHelper.Hash(Base58.Bitcoin.Encode(new Span<Byte>(root)) + clone.ToString());
                 }
             }
+            
+            book.Trades = trades.ToImmutableList();
             transact = book.TransactManager;
 
             if (block.OffersCancelDictionary.Count > 0)
