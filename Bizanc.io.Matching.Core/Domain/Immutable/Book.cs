@@ -17,9 +17,9 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
 
         public ImmutableDictionary<string, OfferBook> Dictionary { get; private set; } = new Dictionary<string, OfferBook>().ToImmutableDictionary();
 
-        public ImmutableList<Offer> ProcessedOffers { get; private set; } = new List<Offer>().ToImmutableList();
+        public ImmutableList<Offer> ProcessedOffers { get; set; } = new List<Offer>().ToImmutableList();
 
-        public ImmutableList<Trade> Trades { get; private set; } = new List<Trade>().ToImmutableList();
+        public ImmutableList<Trade> Trades { get;  set; } = new List<Trade>().ToImmutableList();
 
         public DateTime Timestamp { get; set; }
 
@@ -136,7 +136,7 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
                     ellegibles.Add(clone);
                     foreach(var t in clone.Trades)
                         root = CryptoHelper.Hash(Base58.Bitcoin.Encode(new Span<Byte>(root)) + t.ToString());
-                        
+
                     root = CryptoHelper.Hash(Base58.Bitcoin.Encode(new Span<Byte>(root)) + clone.ToString());
                 }
             }
