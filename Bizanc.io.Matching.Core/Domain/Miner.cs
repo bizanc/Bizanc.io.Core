@@ -1259,6 +1259,13 @@ namespace Bizanc.io.Matching.Core.Domain
             return result.Take(size).ToList();
         }
 
+        public async Task<IList<Withdrawal>> ListWithdrawals(int size, int skip)
+        {
+            var result = await chain.GetAllWithdrawals(skip);
+
+            return result.Take(size).ToList();
+        }
+
         public async Task<List<Withdrawal>> ListWithdrawalsPool(int size)
         {
             return await chain.Pool.WithdrawalPool.Take(size);
@@ -1481,14 +1488,14 @@ namespace Bizanc.io.Matching.Core.Domain
             var candle = new Candle();
             var candles = new List<Candle>();
 
-            var trades = (await ListTrades(asset, reference, from)).OrderBy(t => t.DtTrade);
+            var trades = (await ListTrades(asset, reference, from)).OrderBy(t => t.Timestamp);
 
             if (trades.Count() == 0)
                 return new List<Candle>() { candle };
 
             foreach (var trade in trades)
             {
-                if (trade.DtTrade < candle.Date)
+                if (trade.Timestamp < candle.Date)
                 {
                     candle.Close = trade.Price;
                     if (trade.Price > candle.High) { candle.High = trade.Price; }
@@ -1499,7 +1506,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 {
                     candle = new Candle();
                     candles.Add(candle);
-                    candle.Date = trade.DtTrade.AddSeconds(60 * (int)period - trade.DtTrade.Second);
+                    candle.Date = trade.Timestamp.AddSeconds(60 * (int)period - trade.Timestamp.Second);
                     candle.Date = candle.Date.AddTicks(-(candle.Date.Ticks % TimeSpan.TicksPerSecond));
                     candle.Open = trade.Price;
                     candle.High = trade.Price;

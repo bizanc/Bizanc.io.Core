@@ -8,8 +8,6 @@ namespace Bizanc.io.Matching.Core.Domain
     {
         public string Asset { get; set; }
 
-        public virtual DateTime DtTrade { get; set; }
-
         public virtual string Buyer { get; set; }
 
         public virtual string BuyerWallet { get; set; }
@@ -21,6 +19,14 @@ namespace Bizanc.io.Matching.Core.Domain
         public virtual decimal Quantity { get; set; }
 
         public virtual decimal Price { get; set; }
+
+        public virtual long TimeStampTicks { get; set; }
+
+        public virtual DateTime Timestamp
+        {
+            get { return new DateTime(TimeStampTicks, DateTimeKind.Utc); }
+            set { TimeStampTicks = value.ToUniversalTime().Ticks; }
+        }
 
         public Trade Clone()
         {
@@ -55,7 +61,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public override string ToString()
         {
-            return Asset + DtTrade.ToUniversalTime().Ticks + Buyer + BuyerWallet +
+            return Asset + TimeStampTicks + Buyer + BuyerWallet +
                 Seller + SellerWallet + Quantity.ToString("0.0000000000000000000000000", CultureInfo.GetCultureInfo("En-US")) +
                 Price.ToString("0.0000000000000000000000000", CultureInfo.GetCultureInfo("En-US"));
         }
