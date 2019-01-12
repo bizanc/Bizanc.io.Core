@@ -37,7 +37,7 @@ namespace Bizanc.io.Matching.Infra.Connector
 
         private static Function withdrawERC20 = contract.GetFunction("withdrawERC20");
         private static Event logWithdrawalEvent = contract.GetEvent("logWithdrawal");
-        private static NewFilterInput WithdrawalFilter = logWithdrawalEvent.CreateFilterInput();
+        private static NewFilterInput WithdrawalFilter = logWithdrawalEvent.CreateFilterInput(null, BlockParameter.CreateLatest());
 
         private Nethereum.Hex.HexTypes.HexBigInteger currentBlock;
         private Nethereum.RPC.Eth.DTOs.NewFilterInput startupFilter;
@@ -53,7 +53,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 try
                 {
                     currentBlock = new HexBigInteger((await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync()).Value - 5);
-                    startupFilter = logDepositEvent.CreateFilterInput(new BlockParameter(new HexBigInteger(currentBlock.Value - currentBlock.Value + 1)),  new BlockParameter(currentBlock));
+                    startupFilter = logDepositEvent.CreateFilterInput(new BlockParameter(new HexBigInteger(currentBlock.Value - currentBlock.Value + 1)), new BlockParameter(currentBlock));
                     startupLog = await logDepositEvent.GetAllChanges<LogDepositEvent>(startupFilter);
                 }
                 catch (Exception e)
@@ -112,7 +112,7 @@ namespace Bizanc.io.Matching.Infra.Connector
             return deposits;
         }
 
-        public async Task WithdrawEth(string recipient, decimal amount, string symbol)
+        public async Task<WithdrawInfo> WithdrawEth(string recipient, decimal amount, string symbol)
         {
             try
             {
@@ -136,10 +136,13 @@ namespace Bizanc.io.Matching.Infra.Connector
                     }
                     else
                         Console.WriteLine("No logs returned from withdrawal...");
-                } else 
+
+                    return new WithdrawInfo() { TxHash = receipt.TransactionHash, Timestamp = DateTime.Now };
+                }
+                else
                 if (symbol == "TBRL")
                 {
-                    Console.WriteLine("Sending ETH Withdrawal...");
+                    Console.WriteLine("Sending TBRL Withdrawal...");
                     var receipt = await withdrawERC20.SendTransactionAndWaitForReceiptAsync(publicKeyEth,             // Sender
                                                                                         new HexBigInteger(900000),  // Gas
                                                                                         null,
@@ -158,12 +161,16 @@ namespace Bizanc.io.Matching.Infra.Connector
                     }
                     else
                         Console.WriteLine("No logs returned from withdrawal...");
+
+                    return new WithdrawInfo() { TxHash = receipt.TransactionHash, Timestamp = DateTime.Now };
                 }
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString());
             }
+
+            return null;
         }
     }
 

@@ -114,6 +114,20 @@ namespace Bizanc.io.Matching.Core.Domain
             return result;
         }
 
+        public List<Block> GetBlocksNewToOld(int skip, List<Block> result = null)
+        {
+            if (result == null)
+                result = new List<Block>();
+
+            if (CurrentBlock != null && skip == 0)
+                result.Add(CurrentBlock);
+
+            if (Previous != null)
+                result = Previous.GetBlocksNewToOld(--skip, result);
+
+            return result;
+        }
+
         public List<Block> GetBlocksOldToNew(List<Block> result = null)
         {
             if (result == null)
@@ -145,6 +159,14 @@ namespace Bizanc.io.Matching.Core.Domain
         }
 
         public async Task<List<Withdrawal>> GetAllWithdrawals()
+        {
+            var result = new List<Withdrawal>();
+            result.AddRange(await Pool.WithdrawalPool.GetPool());
+            GetBlocksNewToOld().ForEach(b => result.AddRange(b.Withdrawals));
+            return result;
+        }
+
+        public async Task<List<Withdrawal>> GetAllWithdrawals(int skip)
         {
             var result = new List<Withdrawal>();
             result.AddRange(await Pool.WithdrawalPool.GetPool());

@@ -15,7 +15,7 @@ namespace Bizanc.io.Matching.Infra.Repository
             var result = new List<Trade>();
             using (var s = Store.OpenAsyncSession())
             {
-                var query = s.Query<Trade>().Where(t => t.Asset == asset && t.DtTrade >= from).OrderByDescending(t => t.DtTrade);
+                var query = s.Query<Trade>().Where(t => t.Asset == asset && t.Timestamp >= from).OrderByDescending(t => t.Timestamp);
                 
                 using (var stream = await s.Advanced.StreamAsync(query))
                 {

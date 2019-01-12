@@ -60,9 +60,9 @@ namespace Bizanc.io.Matching.Infra.Connector
             });
         }
 
-        public async Task WithdrawBtc(string recipient, decimal amount)
+        public async Task<WithdrawInfo> WithdrawBtc(string recipient, decimal amount)
         {
-            await Task.Run(delegate
+            return await Task.Run<WithdrawInfo>(delegate
             {
                 var txOperations = QClient.GetBalance(dest: testAddress, unspentOnly: true).Result.Operations;
 
@@ -98,7 +98,10 @@ namespace Bizanc.io.Matching.Infra.Connector
                 if (builder.Verify(tx))
                 {
                     var broadcastResult = QClient.Broadcast(tx).Result;
+                    return new WithdrawInfo() { TxHash = tx.GetHash().ToString(), Timestamp = DateTime.Now };
                 }
+            
+                return null;
             });
         }
 

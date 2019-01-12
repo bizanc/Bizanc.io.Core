@@ -122,14 +122,14 @@ namespace Bizanc.io.Matching.Infra.Connector
             ProcessBtc();
         }
 
-        public async void WithdrawEth(string recipient, decimal amount, string symbol)
+        public async Task<WithdrawInfo> WithdrawEth(string recipient, decimal amount, string symbol)
         {
-            await ethConnector.WithdrawEth(recipient, amount, symbol);
+            return await ethConnector.WithdrawEth(recipient, amount, symbol);
         }
 
-        public async void WithdrawBtc(string recipient, decimal amount)
+        public async Task<WithdrawInfo> WithdrawBtc(string recipient, decimal amount)
         {
-            await btcConnector.WithdrawBtc(recipient, amount);
+            return await btcConnector.WithdrawBtc(recipient, amount);
         }
 
         public string DepositBtc(string btcPubKey, string recipient, decimal amount)

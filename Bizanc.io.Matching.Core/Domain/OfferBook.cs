@@ -96,7 +96,7 @@ namespace Bizanc.io.Matching.Core.Domain
                             Seller = of.HashStr,
                             SellerWallet = of.Wallet,
                             Quantity = execQty,
-                            DtTrade = DateTime.Now,
+                            Timestamp = DateTime.Now,
                             Price = of.Price,
                             Asset = Asset
                         };
@@ -132,7 +132,7 @@ namespace Bizanc.io.Matching.Core.Domain
                             Seller = of.HashStr,
                             SellerWallet = of.Wallet,
                             Quantity = execQty,
-                            DtTrade = DateTime.Now,
+                            Timestamp = DateTime.Now,
                             Price = of.Price,
                             Asset = Asset
                         };
@@ -213,7 +213,7 @@ namespace Bizanc.io.Matching.Core.Domain
                             Seller = offer.HashStr,
                             SellerWallet = offer.Wallet,
                             Quantity = execQty,
-                            DtTrade = DateTime.Now,
+                            Timestamp = DateTime.Now,
                             Price = of.Price,
                             Asset = Asset
                         };
@@ -249,7 +249,7 @@ namespace Bizanc.io.Matching.Core.Domain
                             Seller = offer.HashStr,
                             SellerWallet = offer.Wallet,
                             Quantity = execQty,
-                            DtTrade = DateTime.Now,
+                            Timestamp = DateTime.Now,
                             Price = of.Price,
                             Asset = Asset
                         };

@@ -9,6 +9,7 @@ using Bizanc.io.Matching.Core.Crypto;
 using Bizanc.io.Matching.Infra.Repository;
 using Bizanc.io.Matching.Infra.Connector;
 using System.Collections.Generic;
+using Bizanc.io.Matching.Oracle.Repository;
 
 namespace Bizanc.io.Matching.Oracle
 {
@@ -25,31 +26,36 @@ namespace Bizanc.io.Matching.Oracle
         private static async void WithdrawListener(Miner miner, CryptoConnector connector)
         {
             var withdrwawalDictionary = new Dictionary<string, Withdrawal>();
+            var repository = new WithdrawInfoRepository();
             await Task.Run(async () =>
             {
                 while (true)
                 {
-                    var withdrawals = await miner.ListWithdrawals(100);
+                    var withdrawals = await miner.ListWithdrawals(100, 5);
                     if (withdrawals.Count > 0)
                     {
                         foreach (var wd in withdrawals)
                         {
                             try
                             {
-                                if (!withdrwawalDictionary.ContainsKey(wd.HashStr))
+                                if (!withdrwawalDictionary.ContainsKey(wd.HashStr) && !(await repository.Contains(wd.HashStr)))
                                 {
-                                    withdrwawalDictionary.Add(wd.HashStr, wd);
+                                    WithdrawInfo result = null;
+
                                     if (wd.Asset == "BTC")
-                                    {
-                                        connector.WithdrawBtc(wd.TargetWallet, wd.Size);
-                                    }
+                                        result = await connector.WithdrawBtc(wd.TargetWallet, wd.Size);
                                     else
+                                        result = await connector.WithdrawEth(wd.TargetWallet, wd.Size, wd.Asset);
+
+                                    if (result != null)
                                     {
-                                        connector.WithdrawEth(wd.TargetWallet, wd.Size, wd.Asset);
+                                        withdrwawalDictionary.Add(wd.HashStr, wd);
+                                        result.HashStr = wd.HashStr;
+                                        await repository.Save(result);
                                     }
                                 }
                             }
-                            catch(Exception e)
+                            catch (Exception e)
                             {
                                 Console.WriteLine("Failed to withdrawal... \n" + e.ToString());
                             }
@@ -64,7 +70,7 @@ namespace Bizanc.io.Matching.Oracle
         async static Task Main()
         {
             var CryptoConnector = new CryptoConnector();
-            var miner = new Miner(new PeerListener(), new WalletRepository(), 
+            var miner = new Miner(new PeerListener(), new WalletRepository(),
             new BlockRepository(), new BalanceRepository(), new BookRepository(),
             new DepositRepository(), new OfferRepository(), new TransactionRepository(),
             new WithdrawalRepository(), new TradeRepository(),
