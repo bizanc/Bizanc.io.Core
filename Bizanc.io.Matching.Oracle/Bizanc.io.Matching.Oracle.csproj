@@ -6,14 +6,10 @@
     <ProjectReference Include="..\Bizanc.io.Matching.Api\Bizanc.io.Matching.Api.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.Collections.Immutable" Version="1.5.0" />
-  </ItemGroup>
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
-    <LangVersion>7.2</LangVersion>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
 
 </Project>
