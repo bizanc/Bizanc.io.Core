@@ -250,6 +250,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     catch (Exception e)
                     {
                         Console.WriteLine(e.ToString());
+                        msg = null;
                     }
                 }
             }
@@ -273,7 +274,7 @@ namespace Bizanc.io.Matching.Core.Domain
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString() + "\n" + msg);
-                await Disconnect(peer);
+                throw;
             }
 
             if (message.MessageType != MessageType.BlockResponse && message.MessageType != MessageType.HandShake && !peer.InitSource.Task.IsCompleted)
@@ -342,6 +343,7 @@ namespace Bizanc.io.Matching.Core.Domain
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString() + "\n" + msg);
+                throw;
             }
         }
 
