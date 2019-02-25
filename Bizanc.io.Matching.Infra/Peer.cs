@@ -112,7 +112,7 @@ namespace Bizanc.io.Matching.Infra
 
         public async void SendMessage<T>(T message) where T : BaseMessage
         {
-            await sendStream.Writer.WriteAsync(message);
+        await sendStream.Writer.WriteAsync(message);
         }
 
         public async Task<string> Receive()
