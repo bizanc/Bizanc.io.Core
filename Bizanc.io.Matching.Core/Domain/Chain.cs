@@ -169,9 +169,9 @@ namespace Bizanc.io.Matching.Core.Domain
         public async Task<List<Withdrawal>> GetAllWithdrawals(int skip)
         {
             var result = new List<Withdrawal>();
-            result.AddRange(await Pool.WithdrawalPool.GetPool());
-            GetBlocksNewToOld().ForEach(b => result.AddRange(b.Withdrawals));
-            return result;
+            
+            GetBlocksNewToOld().Skip(5).ToList().ForEach(b => result.AddRange(b.Withdrawals));
+            return await Task.FromResult(result);
         }
 
         public async Task<List<Offer>> GetAllOffers()
@@ -941,7 +941,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     root = CryptoHelper.Hash(Base58.Bitcoin.Encode(new Span<Byte>(root)) + clone.ToString());
                 }
             }
-            
+
             book.Trades = trades.ToImmutableList();
             transact = book.TransactManager;
 
@@ -1104,7 +1104,6 @@ namespace Bizanc.io.Matching.Core.Domain
             return fork;
         }
 
-
         public async Task<Chain> Append(Block block)
         {
             try
@@ -1138,7 +1137,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 result.Previous = null;
                 result = cleanResult;
             }
-            
+
             return result;
         }
 
