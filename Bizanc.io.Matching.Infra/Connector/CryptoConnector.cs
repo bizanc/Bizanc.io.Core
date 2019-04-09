@@ -82,44 +82,48 @@ namespace Bizanc.io.Matching.Infra.Connector
 
         private async void ProcessEth()
         {
-            var success = true;
-            try
+            while (true)
             {
-                Console.WriteLine("Reading ETH Deposits.....");
-                var ethDeposits = await ethConnector.GetEthDeposit();
-                Console.WriteLine(ethDeposits.Count + " ETH Deposits found.");
-                ethDeposits.ForEach(async d => await stream.Writer.WriteAsync(d));
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-                success = false;
-            }
+                var success = true;
+                try
+                {
+                    Console.WriteLine("Reading ETH Deposits.....");
+                    var ethDeposits = await ethConnector.GetEthDeposit();
+                    Console.WriteLine(ethDeposits.Count + " ETH Deposits found.");
+                    ethDeposits.ForEach(async d => await stream.Writer.WriteAsync(d));
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                    success = false;
+                    await Task.Delay(2000);
+                }
 
-            if (success)
-                await Task.Delay(15000);
-
-            ProcessEth();
+                if (success)
+                    await Task.Delay(15000);
+            }
         }
 
         private async void ProcessBtc()
         {
-            var success = true;
-            try
+            while (true)
             {
-                var btcDeposits = await LoadBTC();
-                btcDeposits.ForEach(async d => await stream.Writer.WriteAsync(d));
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-                success = false;
-            }
+                var success = true;
+                try
+                {
+                    var btcDeposits = await LoadBTC();
+                    btcDeposits.ForEach(async d => await stream.Writer.WriteAsync(d));
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                    success = false;
+                    await Task.Delay(2000);
+                }
 
-            if (success)
-                await Task.Delay(15000);
-
-            ProcessBtc();
+                if (success)
+                    await Task.Delay(15000);
+            }
         }
 
         public async Task<WithdrawInfo> WithdrawEth(string recipient, decimal amount, string symbol)
