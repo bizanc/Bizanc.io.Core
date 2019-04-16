@@ -10,13 +10,13 @@ using QBitNinja.Client;
 using System.Text;
 using System.Linq;
 using System.Collections.Generic;
+using NBitcoin.Policy;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {
     public class BitcoinConnector
     {
-        private BitcoinSecret testAddress = new BitcoinSecret("cUmr2tP4KXsGseYA53F3kLRtqPKxtJ9ofPbgAeAd8qxKjPSz9pCd");
-
+        private BitcoinSecret testAddress = new BitcoinSecret("cThzd6sBfn1Cq2VG5XUDg1LETHCKWGFcCuyXAXvSA4fHiSiuc4Xy");
 
         private QBitNinjaClient QClient = new QBitNinjaClient(Network.TestNet);
 
@@ -30,12 +30,26 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                 foreach (var op in txOperations)
                 {
+                    if (op.SpentCoins.Any(c => ((Coin)c).ScriptPubKey.ToString().Contains(testAddress.PubKeyHash.ToString())))
+                    {
+                        var tx = QClient.GetTransaction(op.TransactionId).Result;
+                        foreach (var coin in tx.ReceivedCoins)
+                        {
+                            if (!isDeposit && coin.Amount.Equals(Money.Zero))
+                            {
+                                var script = coin.GetScriptCode().ToString();
+                                script = script.Replace("OP_RETURN ", "");
+                                var wd = HexToString(script);
+                            }
+                        }
+                        continue;
+                    }
+
                     var address = "";
                     var transaction = QClient.GetTransaction(op.TransactionId).Result;
-
                     foreach (var coin in transaction.ReceivedCoins)
                     {
-                        if (coin.Amount.Equals(Money.Zero))
+                        if (!isDeposit && coin.Amount.Equals(Money.Zero))
                         {
                             var script = coin.GetScriptCode().ToString();
                             script = script.Replace("OP_RETURN ", "");
@@ -49,9 +63,11 @@ namespace Bizanc.io.Matching.Infra.Connector
                         var deposit = new Deposit();
                         deposit.TargetWallet = address;
                         deposit.Asset = "BTC";
+                        deposit.AssetId = "0x0";
                         deposit.Quantity = op.Amount.ToDecimal((MoneyUnit)100000000);
                         deposit.TxHash = op.TransactionId.ToString();
-
+                        deposit.Timestamp = DateTime.Now;
+                        deposit.BlockNumber = transaction.Block.Height.ToString();
                         deposits.Add(deposit);
                     }
                 }
@@ -60,7 +76,7 @@ namespace Bizanc.io.Matching.Infra.Connector
             });
         }
 
-        public async Task<WithdrawInfo> WithdrawBtc(string recipient, decimal amount)
+        public async Task<WithdrawInfo> WithdrawBtc(string withdrawHash, string recipient, decimal amount)
         {
             return await Task.Run<WithdrawInfo>(delegate
             {
@@ -91,16 +107,24 @@ namespace Bizanc.io.Matching.Infra.Connector
                                     .AddCoins(coins)
                                     .AddKeys(testAddress)
                                     .Send(destination, Money.Coins(amount))
+                                    .Send(TxNullDataTemplate.Instance.GenerateScriptPubKey(Encoding.UTF8.GetBytes(withdrawHash)), Money.Zero)
                                     .SetChange(testAddress)
                                     .SendFees(Money.Coins(0.0001m))
                                     .BuildTransaction(sign: true);
 
-                if (builder.Verify(tx))
+                TransactionPolicyError[] errors = null;
+                if (builder.Verify(tx, out errors))
                 {
                     var broadcastResult = QClient.Broadcast(tx).Result;
+                    broadcastResult.ToString();
                     return new WithdrawInfo() { TxHash = tx.GetHash().ToString(), Timestamp = DateTime.Now };
                 }
-            
+
+                if (errors != null)
+                {
+                    errors.ToString();
+                }
+
                 return null;
             });
         }

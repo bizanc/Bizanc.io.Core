@@ -9,8 +9,9 @@ namespace Bizanc.io.Matching.Core.Connector
 {
     public interface IConnector
     {
-        ChannelReader<Deposit> GetChannelReader();
-
-        Task<IEnumerable<Deposit>> Start();
+        ChannelReader<Deposit> GetDepositsReader();
+        ChannelReader<WithdrawInfo> GetWithdrawsReader();
+        Task<IEnumerable<Deposit>> StartDeposits(string EthBlockNumber);
+        Task<IEnumerable<WithdrawInfo>> StartWithdraws(string EthBlockNumber);
     }
 }

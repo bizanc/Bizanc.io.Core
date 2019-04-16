@@ -20,157 +20,145 @@ namespace Bizanc.io.Matching.Infra.Connector
 {
     public class EthereumConnector
     {
-        private static string privateKeyEth = "0x2952a82db5058f4b61cb283db47a767cf8f7157fe0144b9575b1b117495241f3";
-        static string publicKeyEth = "0x046CDC17FfBd317600c7503Cb70Cd65161b41297";
-        private static Account account = new Account(privateKeyEth);
-        private static Web3Geth web3 = new Web3Geth(account, "https://rinkeby.infura.io/v3/f2478498dd8c423ea9065f07a0c110ca"); // Testnet
-
-        private static string abi = @"[{'constant':false,'inputs':[{'name':'destination','type':'string'},{'name':'token','type':'address'}],'name':'depositERC20','outputs':[],'payable':false,'stateMutability':'nonpayable','type':'function'},{'constant':false,'inputs':[{'name':'to','type':'address'},{'name':'origin','type':'address'},{'name':'value','type':'uint256'},{'name':'token','type':'address'}],'name':'withdrawERC20','outputs':[],'payable':false,'stateMutability':'nonpayable','type':'function'},{'constant':false,'inputs':[{'name':'_address','type':'address'}],'name':'denyAccess','outputs':[],'payable':false,'stateMutability':'nonpayable','type':'function'},{'constant':false,'inputs':[{'name':'_address','type':'address'}],'name':'allowAccess','outputs':[],'payable':false,'stateMutability':'nonpayable','type':'function'},{'constant':false,'inputs':[{'name':'destination','type':'string'}],'name':'depositEth','outputs':[],'payable':true,'stateMutability':'payable','type':'function'},{'constant':false,'inputs':[{'name':'to','type':'address'},{'name':'origin','type':'address'},{'name':'value','type':'uint256'}],'name':'withdrawEth','outputs':[],'payable':false,'stateMutability':'nonpayable','type':'function'},{'anonymous':false,'inputs':[{'indexed':false,'name':'from','type':'address'},{'indexed':false,'name':'destination','type':'string'},{'indexed':false,'name':'amount','type':'uint256'},{'indexed':false,'name':'currency','type':'string'}],'name':'logDeposit','type':'event'},{'anonymous':false,'inputs':[{'indexed':false,'name':'to','type':'address'},{'indexed':false,'name':'origin','type':'address'},{'indexed':false,'name':'amount','type':'uint256'},{'indexed':false,'name':'curency','type':'string'}],'name':'logWithdrawal','type':'event'},{'anonymous':false,'inputs':[{'indexed':true,'name':'_address','type':'address'}],'name':'AllowAccessEvent','type':'event'},{'anonymous':false,'inputs':[{'indexed':true,'name':'_address','type':'address'}],'name':'DenyAccessEvent','type':'event'}]";
-        private static string contractAddress = "0x27634e638c7131c9fa010fede3b77f878967f000";
+        private static Web3Geth web3 = new Web3Geth("https://rinkeby.infura.io/v3/f2478498dd8c423ea9065f07a0c110ca"); // Testnet
+        private static string abi = @"[ { 'constant': false, 'inputs': [ { 'name': 'destination', 'type': 'string' }, { 'name': 'token', 'type': 'address' } ], 'name': 'depositERC20', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': 'withdrawHash', 'type': 'string' }, { 'name': 'to', 'type': 'address' }, { 'name': 'origin', 'type': 'address' }, { 'name': 'value', 'type': 'uint256' }, { 'name': 'token', 'type': 'address' } ], 'name': 'withdrawERC20', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': 'withdrawHash', 'type': 'string' }, { 'name': 'to', 'type': 'address' }, { 'name': 'origin', 'type': 'address' }, { 'name': 'value', 'type': 'uint256' } ], 'name': 'withdrawEth', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': '_address', 'type': 'address' } ], 'name': 'denyAccess', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': '_address', 'type': 'address' } ], 'name': 'allowAccess', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': 'destination', 'type': 'string' } ], 'name': 'depositEth', 'outputs': [], 'payable': true, 'stateMutability': 'payable', 'type': 'function' }, { 'anonymous': false, 'inputs': [ { 'indexed': false, 'name': 'from', 'type': 'address' }, { 'indexed': false, 'name': 'destination', 'type': 'string' }, { 'indexed': false, 'name': 'amount', 'type': 'uint256' }, { 'indexed': false, 'name': 'asset', 'type': 'string' }, { 'indexed': false, 'name': 'assetId', 'type': 'address' } ], 'name': 'logDeposit', 'type': 'event' }, { 'anonymous': false, 'inputs': [ { 'indexed': false, 'name': 'withdrawHash', 'type': 'string' }, { 'indexed': false, 'name': 'to', 'type': 'address' }, { 'indexed': false, 'name': 'origin', 'type': 'address' }, { 'indexed': false, 'name': 'amount', 'type': 'uint256' }, { 'indexed': false, 'name': 'asset', 'type': 'string' }, { 'indexed': false, 'name': 'assetId', 'type': 'address' } ], 'name': 'logWithdrawal', 'type': 'event' }, { 'anonymous': false, 'inputs': [ { 'indexed': true, 'name': '_address', 'type': 'address' } ], 'name': 'AllowAccessEvent', 'type': 'event' }, { 'anonymous': false, 'inputs': [ { 'indexed': true, 'name': '_address', 'type': 'address' } ], 'name': 'DenyAccessEvent', 'type': 'event' } ]";
+        private static string contractAddress = "0xf246b043f492e66eBae298508f3e6f4a643242F9";
         private static Contract contract = web3.Eth.GetContract(abi, contractAddress);
-
-        private static Function depositEth = contract.GetFunction("depositEth");
         private static Event logDepositEvent = contract.GetEvent("logDeposit");
-        private static NewFilterInput depositFilter = logDepositEvent.CreateFilterInput();
+        private static Event logWithdrawEvent = contract.GetEvent("logWithdrawal");
+        private Nethereum.Hex.HexTypes.HexBigInteger currentBlockDeposits = null;
+        private Nethereum.Hex.HexTypes.HexBigInteger currentBlockWithdraws = null;
 
-        private static Function withdrawEth = contract.GetFunction("withdrawEth");
-
-        private static Function withdrawERC20 = contract.GetFunction("withdrawERC20");
-        private static Event logWithdrawalEvent = contract.GetEvent("logWithdrawal");
-        private static NewFilterInput WithdrawalFilter = logWithdrawalEvent.CreateFilterInput(null, BlockParameter.CreateLatest());
-
-        private Nethereum.Hex.HexTypes.HexBigInteger currentBlock;
-        private Nethereum.RPC.Eth.DTOs.NewFilterInput startupFilter;
-        private List<Nethereum.Contracts.EventLog<Bizanc.io.Matching.Infra.Connector.LogDepositEvent>> startupLog;
-
-        public async Task<List<Deposit>> Startup()
+        public async Task<List<Deposit>> StartupDeposits(string blockNumber)
         {
+            List<Deposit> deposits = null;
             try
             {
-                //var blockPeriod = 5 * 60 * 20 * 30;  // Amount of blocks to scan for events
-                var deposits = new List<Deposit>();
+                var startupLog = new List<Nethereum.Contracts.EventLog<Bizanc.io.Matching.Infra.Connector.LogDepositEvent>>();
 
-                try
+                var parameter = BlockParameter.CreateEarliest();
+
+                if (!string.IsNullOrEmpty(blockNumber))
                 {
-                    currentBlock = new HexBigInteger((await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync()).Value - 5);
-                    startupFilter = logDepositEvent.CreateFilterInput(new BlockParameter(new HexBigInteger(currentBlock.Value - currentBlock.Value + 1)), new BlockParameter(currentBlock));
-                    startupLog = await logDepositEvent.GetAllChanges<LogDepositEvent>(startupFilter);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.ToString());
+                    Console.WriteLine("Reading Eth Events from block " + blockNumber);
+                    currentBlockDeposits = new HexBigInteger(blockNumber);
+                    parameter = new BlockParameter(currentBlockDeposits);
                 }
 
-                foreach (var d in startupLog)
-                {
-                    var deposit = new Deposit();
-                    deposit.TargetWallet = d.Event.Destination;
-                    deposit.Asset = d.Event.Symbol;
-                    deposit.Quantity = Web3Geth.Convert.FromWei(d.Event.Value);
-                    deposit.TxHash = d.Log.TransactionHash;
-                    currentBlock = d.Log.BlockNumber;
-                    deposits.Add(deposit);
-                }
-
-                return deposits;
+                var lastBlock = new HexBigInteger((await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync()).Value - 5);
+                var startupFilter = logDepositEvent.CreateFilterInput(parameter, new BlockParameter(lastBlock));
+                deposits = await GetDeposits(startupFilter);
+                currentBlockDeposits = lastBlock;
             }
             catch (Exception e)
             {
                 Console.WriteLine("Ethereum Connector Startp Failed: " + e.ToString());
             }
 
-            return await Task.FromResult((List<Deposit>)null);
+            return deposits;
         }
 
-        public async Task<List<Deposit>> GetEthDeposit()
+        public async Task<List<WithdrawInfo>> StartupWithdraws(string blockNumber)
+        {
+            List<WithdrawInfo> deposits = null;
+            try
+            {
+                var startupLog = new List<Nethereum.Contracts.EventLog<Bizanc.io.Matching.Infra.Connector.LogDepositEvent>>();
+
+                var parameter = BlockParameter.CreateEarliest();
+
+                if (!string.IsNullOrEmpty(blockNumber))
+                {
+                    Console.WriteLine("Reading Eth Events from block " + blockNumber);
+                    currentBlockWithdraws = new HexBigInteger(blockNumber);
+                    parameter = new BlockParameter(currentBlockWithdraws);
+                }
+
+                var lastBlock = new HexBigInteger(await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync());
+                var startupFilter = logWithdrawEvent.CreateFilterInput(parameter, new BlockParameter(lastBlock));
+                deposits = await GetWithdraws(startupFilter);
+                currentBlockWithdraws = lastBlock;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Ethereum Connector Startp Failed: " + e.ToString());
+            }
+
+            return deposits;
+        }
+
+        private async Task<List<Deposit>> GetDeposits(NewFilterInput filter)
         {
             var deposits = new List<Deposit>();
-            depositFilter = logDepositEvent.CreateFilterInput();
-            depositFilter.FromBlock = new BlockParameter(currentBlock);
-            var lastBlock = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
-            depositFilter.ToBlock = new BlockParameter(new HexBigInteger(lastBlock.Value - 5));
-            var log = await logDepositEvent.GetAllChanges<LogDepositEvent>(depositFilter);
+            var log = await logDepositEvent.GetAllChanges<LogDepositEvent>(filter);
 
             if (log.Count > 0)
             {
                 foreach (var d in log)
                 {
-                    currentBlock = d.Log.BlockNumber;
+                    if (d.Event.AssetId == "0x0000000000000000000000000000000000000000"
+                        || d.Event.AssetId == "0x7a094dfd89893d204436bf331a51d80f5c48a2eb")
+                    {
+                        var deposit = new Deposit();
+                        deposit.TargetWallet = d.Event.Destination;
+                        deposit.Asset = d.Event.Symbol;
+                        deposit.AssetId = d.Event.AssetId;
+                        deposit.Quantity = Web3Geth.Convert.FromWei(d.Event.Value);
+                        deposit.TxHash = d.Log.TransactionHash;
+                        deposit.BlockNumber = d.Log.BlockNumber.HexValue;
+                        deposit.Timestamp = DateTime.Now;
 
-                    //Read Ethereum events data.
-
-                    var deposit = new Deposit();
-                    deposit.TargetWallet = d.Event.Destination;
-                    deposit.Asset = d.Event.Symbol;
-                    deposit.Quantity = Web3Geth.Convert.FromWei(d.Event.Value);
-                    deposit.TxHash = d.Log.TransactionHash;
-
-                    deposits.Add(deposit);
+                        deposits.Add(deposit);
+                    }
                 }
             }
 
             return deposits;
         }
 
-        public async Task<WithdrawInfo> WithdrawEth(string recipient, decimal amount, string symbol)
+        private async Task<List<WithdrawInfo>> GetWithdraws(NewFilterInput filter)
         {
-            try
+            var withdraws = new List<WithdrawInfo>();
+            var log = await logWithdrawEvent.GetAllChanges<LogWithdrawalEvent>(filter);
+
+            if (log.Count > 0)
             {
-                if (symbol == "ETH")
+                foreach (var d in log)
                 {
-                    Console.WriteLine("Sending ETH Withdrawal...");
-                    var receipt = await withdrawEth.SendTransactionAndWaitForReceiptAsync(publicKeyEth,             // Sender
-                                                                                        new HexBigInteger(900000),  // Gas
-                                                                                        null,
-                                                                                        null,
-                                                                                        recipient,      // Recipient
-                                                                                        publicKeyEth,   // Sender
-                                                                                        Web3Geth.Convert.ToWei(amount));
-
-                    var log = await logWithdrawalEvent.GetAllChanges<LogWithdrawalEvent>(WithdrawalFilter);
-
-                    if (log.Count > 0)
-                    {
-                        // withdrawal successful
-                        Console.WriteLine("Withdrawal Successful");
-                    }
-                    else
-                        Console.WriteLine("No logs returned from withdrawal...");
-
-                    return new WithdrawInfo() { TxHash = receipt.TransactionHash, Timestamp = DateTime.Now };
-                }
-                else
-                if (symbol == "TBRL")
-                {
-                    Console.WriteLine("Sending TBRL Withdrawal...");
-                    var receipt = await withdrawERC20.SendTransactionAndWaitForReceiptAsync(publicKeyEth,             // Sender
-                                                                                        new HexBigInteger(900000),  // Gas
-                                                                                        null,
-                                                                                        null,
-                                                                                        recipient,      // Recipient
-                                                                                        publicKeyEth,   // Sender
-                                                                                        Web3Geth.Convert.ToWei(amount),
-                                                                                        "0x7a094dfD89893d204436Bf331a51d80F5C48a2Eb");
-
-                    var log = await logWithdrawalEvent.GetAllChanges<LogWithdrawalEvent>(WithdrawalFilter);
-
-                    if (log.Count > 0)
-                    {
-                        // withdrawal successful
-                        Console.WriteLine("Withdrawal Successful");
-                    }
-                    else
-                        Console.WriteLine("No logs returned from withdrawal...");
-
-                    return new WithdrawInfo() { TxHash = receipt.TransactionHash, Timestamp = DateTime.Now };
+                    var withdraw = new WithdrawInfo();
+                    withdraw.HashStr = d.Event.WithdrawHash;
+                    withdraw.TxHash = d.Log.TransactionHash;
+                    withdraw.BlockNumber = d.Log.BlockNumber.HexValue;
+                    withdraw.Timestamp = DateTime.Now;
+                    withdraw.Asset = d.Event.Symbol;
+                    withdraws.Add(withdraw);
                 }
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-            }
 
-            return null;
+            return withdraws;
+        }
+
+        public async Task<List<Deposit>> GetEthDeposit()
+        {
+            var depositFilter = logDepositEvent.CreateFilterInput();
+            depositFilter.FromBlock = new BlockParameter(currentBlockDeposits);
+            var lastBlock = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
+            lastBlock = new HexBigInteger(lastBlock.Value - 5);
+            depositFilter.ToBlock = new BlockParameter(lastBlock);
+            var result = await GetDeposits(depositFilter);
+            currentBlockDeposits = lastBlock;
+            return result;
+        }
+
+        public async Task<List<WithdrawInfo>> GetEthWithdaws()
+        {
+            var withdrawFilter = logWithdrawEvent.CreateFilterInput();
+            withdrawFilter.FromBlock = new BlockParameter(currentBlockWithdraws);
+            var lastBlock = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
+            withdrawFilter.ToBlock = new BlockParameter(lastBlock);
+            var result = await GetWithdraws(withdrawFilter);
+            currentBlockWithdraws = lastBlock;
+            return result;
         }
     }
 
@@ -185,22 +173,31 @@ namespace Bizanc.io.Matching.Infra.Connector
         [Parameter("uint256", "amount", 3, false)]
         public BigInteger Value { get; set; }
 
-        [Parameter("string", "currency", 4, false)]
+        [Parameter("string", "asset", 4, false)]
         public string Symbol { get; set; }
+
+        [Parameter("address", "assetId", 5, false)]
+        public string AssetId { get; set; }
     }
 
     public class LogWithdrawalEvent
     {
-        [Parameter("address", "to", 1, false)]
+        [Parameter("string", "withdrawHash", 1, false)]
+        public string WithdrawHash { get; set; }
+
+        [Parameter("address", "to", 2, false)]
         public string Destination { get; set; }
 
-        [Parameter("address", "origin", 2, false)]
+        [Parameter("address", "origin", 3, false)]
         public string Sender { get; set; }
 
-        [Parameter("uint256", "amount", 3, false)]
+        [Parameter("uint256", "amount", 4, false)]
         public BigInteger Value { get; set; }
 
-        [Parameter("string", "currency", 4, false)]
+        [Parameter("string", "asset", 5, false)]
         public string Symbol { get; set; }
+
+        [Parameter("address", "assetId", 6, false)]
+        public string AssetId { get; set; }
     }
 }

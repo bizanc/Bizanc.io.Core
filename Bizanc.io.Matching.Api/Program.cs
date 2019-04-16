@@ -28,12 +28,12 @@ namespace Bizanc.io.Matching.Api
             var miner = new Miner(new PeerListener(), new WalletRepository(),
             new BlockRepository(), new BalanceRepository(), new BookRepository(),
             new DepositRepository(), new OfferRepository(), new TransactionRepository(),
-            new WithdrawalRepository(), new TradeRepository(),
+            new WithdrawalRepository(), new TradeRepository(), new WithdrawInfoRepository(),
             new CryptoConnector());
 
             miner.Start(true).Wait();
 
-            var seednode = new Peer(new TcpClient("localhost", 5556));
+            var seednode = new Peer(new TcpClient("localhost", 3001));
             miner.Connect(seednode);
 
             return miner;
