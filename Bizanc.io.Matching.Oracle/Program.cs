@@ -105,7 +105,7 @@ namespace Bizanc.io.Matching.Oracle
             else
             {
                 Console.WriteLine("No Master Variable");
-                var seednode = new Peer(new TcpClient("localhost", 5001));
+                var seednode = new Peer(new TcpClient("localhost", 5556));
                 miner.Connect(seednode);
 
                 // try
