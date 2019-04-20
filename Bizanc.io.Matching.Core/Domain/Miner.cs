@@ -166,11 +166,10 @@ namespace Bizanc.io.Matching.Core.Domain
             if (!isOracle)
                 await peerListener.Start(listenPort);
 
-            var deposits = await connector.StartDeposits(await depositRepository.GetLastEthBlockNumber());
+            var (deposits, withdraws) = await connector.Start(await depositRepository.GetLastEthBlockNumber(), await withdrawInfoRepository.GetLastEthBlockNumber(), await depositRepository.GetLastBtcBlockNumber(), await withdrawInfoRepository.GetLastBtcBlockNumber());
             foreach (var deposit in deposits)
                 await AppendDeposit(deposit);
 
-            var withdraws = await connector.StartWithdraws(await withdrawInfoRepository.GetLastEthBlockNumber());
             foreach (var withdraw in withdraws)
                 await AppendWithdraw(withdraw);
 

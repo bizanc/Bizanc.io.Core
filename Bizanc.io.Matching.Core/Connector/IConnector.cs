@@ -11,7 +11,6 @@ namespace Bizanc.io.Matching.Core.Connector
     {
         ChannelReader<Deposit> GetDepositsReader();
         ChannelReader<WithdrawInfo> GetWithdrawsReader();
-        Task<IEnumerable<Deposit>> StartDeposits(string EthBlockNumber);
-        Task<IEnumerable<WithdrawInfo>> StartWithdraws(string EthBlockNumber);
+        Task<(IEnumerable<Deposit>, IEnumerable<WithdrawInfo>)> Start(string ethDepositBlockNumber, string ethWithdrawBlockNumber, string btcDepositBlockNumber, string btcWithdrawBlockNumber);
     }
 }

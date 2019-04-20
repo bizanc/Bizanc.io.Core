@@ -53,8 +53,8 @@ namespace Bizanc.io.Matching.App
             else
             {
                 Console.WriteLine("No Master Variable");
-                // var seednode = new Peer(new TcpClient("seed.bizanc.io", 5556));
-                // miner.Connect(seednode);
+                var seednode = new Peer(new TcpClient("seed.bizanc.io", 5556));
+                miner.Connect(seednode);
     
                 // var seednode = new Peer(new TcpClient("localhost", 3001));
                 // miner.Connect(seednode);

@@ -22,11 +22,11 @@ namespace Bizanc.io.Matching.Test
             CryptoHelper.IsValidSignature(transaction.ToString(), pubKey, signR).Should().BeTrue();
         }
 
-        [Fact]
-        public void Deposit()
-        {
-            var con = new CryptoConnector();
-            var test = con.DepositBtc("mzVr7Pk8gjWQBGqkGdcn5MZRS9ToxPWTXj", "n4nbUmxSRkSPDuRMTeuLV24pPQZdhqfjKN", 0.001m);
-        }
+        // [Fact]
+        // public void Deposit()
+        // {
+        //     var con = new CryptoConnector();
+        //     var test = con.DepositBtc("mzVr7Pk8gjWQBGqkGdcn5MZRS9ToxPWTXj", "n4nbUmxSRkSPDuRMTeuLV24pPQZdhqfjKN", 0.001m);
+        // }
     }
 }

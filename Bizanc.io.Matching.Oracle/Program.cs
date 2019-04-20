@@ -30,6 +30,7 @@ namespace Bizanc.io.Matching.Oracle
         {
             var withdrwawalDictionary = new Dictionary<string, Withdrawal>();
             var ethConnector = new EthereumOracleConnector();
+            var btcConnector = new BitcoinOracleConnector();
 
             await Task.Run(async () =>
             {
@@ -47,7 +48,7 @@ namespace Bizanc.io.Matching.Oracle
                                     WithdrawInfo result = null;
 
                                     if (wd.Asset == "BTC")
-                                        result = await connector.WithdrawBtc(wd.HashStr, wd.TargetWallet, wd.Size);
+                                        result = await btcConnector.WithdrawBtc(wd.HashStr, wd.TargetWallet, wd.Size);
                                     else
                                         result = await ethConnector.WithdrawEth(privateKeyEth, wd.HashStr, wd.TargetWallet, wd.Size, wd.Asset);
 
@@ -66,7 +67,7 @@ namespace Bizanc.io.Matching.Oracle
                         }
                     }
 
-                    Thread.Sleep(1000);
+                    await Task.Delay(1000);
                 }
             });
         }
@@ -104,7 +105,7 @@ namespace Bizanc.io.Matching.Oracle
             else
             {
                 Console.WriteLine("No Master Variable");
-                var seednode = new Peer(new TcpClient("localhost", 3001));
+                var seednode = new Peer(new TcpClient("localhost", 5001));
                 miner.Connect(seednode);
 
                 // try
