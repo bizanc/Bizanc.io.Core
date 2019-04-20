@@ -30,7 +30,6 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
         {
             var transact = TransactManager;
             transact = transact.ChangeBalance(dp.TargetWallet, dp.Asset, dp.Quantity);
-            dp.Timestamp = DateTime.Now;
             return new Deposit(this, transact);
         }
 

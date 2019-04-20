@@ -30,6 +30,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
         Task<IList<Withdrawal>> ListWithdrawals(int size);
         Task<Withdrawal> GetWithdrawalById(string id);
+        Task<WithdrawInfo> GetWithdrawInfoById(string id);
         Task<List<Withdrawal>> ListWithdrawalsPool(int size);
         Task<IList<Withdrawal>> ListWithdrawalsBySourceWallet(string wallet, int size);
         Task<IList<Withdrawal>> ListWithdrawalsByTargetWallet(string wallet, int size);

@@ -1,4 +1,4 @@
-pragma solidity 0.5.1;
+pragma solidity 0.5.7;
 
 contract ERC20 {
     function symbol() public returns(string memory);
@@ -40,14 +40,14 @@ contract MultiAccess {
 
 contract BizancioGateway is MultiAccess {
     
-    event logDeposit (address from, string destination, uint amount, string currency);
-    event logWithdrawal (address to, address origin, uint amount, string curency);
+    event logDeposit (address from, string destination, uint amount, string asset, address assetId);
+    event logWithdrawal (string withdrawHash, address to, address origin, uint amount, string asset, address assetId);
     
     // call to deposit ETH
     // destination: public address in Bizanc.io 
     // msg value will be deposited to destination
     function depositEth (string memory destination) public payable {
-        emit logDeposit (msg.sender, destination, msg.value, "ETH");
+        emit logDeposit (msg.sender, destination, msg.value, "ETH", address(0x0));
     }
     
     // call to deposit tokens
@@ -58,7 +58,7 @@ contract BizancioGateway is MultiAccess {
         ERC20 tokenContract = ERC20(token);
         uint value = tokenContract.allowance(msg.sender, address(this));
         require(tokenContract.transferFrom(msg.sender, address(this), value));
-        emit logDeposit (msg.sender, destination, value,  tokenContract.symbol());
+        emit logDeposit (msg.sender, destination, value,  tokenContract.symbol(), token);
     }
     
     // call to send ETH or tokens to users
@@ -66,9 +66,9 @@ contract BizancioGateway is MultiAccess {
     // to: Ethereum address to receive funds
     // origin: public address in Bizanc.io 
     // value: value in wei
-    function withdrawEth (address payable to, address origin, uint value) public canAccess {
+    function withdrawEth (string memory withdrawHash, address payable to, address origin, uint value) public canAccess {
         if(address(to).send(value))
-            emit logWithdrawal (to, origin, value, "ETH");
+            emit logWithdrawal (withdrawHash, to, origin, value, "ETH", address(0x0));
     }
     
     // call to send tokens to users
@@ -77,10 +77,10 @@ contract BizancioGateway is MultiAccess {
     // origin: public address in Bizanc.io 
     // value: value in wei
     // token: token address
-    function withdrawERC20 (address to, address origin, uint value, address token ) public canAccess {
+    function withdrawERC20 (string memory withdrawHash, address to, address origin, uint value, address token ) public canAccess {
         ERC20 tokenContract = ERC20(token);
         tokenContract.transfer(to, value);
-        emit logWithdrawal (to, origin, value, tokenContract.symbol());
+        emit logWithdrawal (withdrawHash, to, origin, value, tokenContract.symbol(), token);
     }
     
 }

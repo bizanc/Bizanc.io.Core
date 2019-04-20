@@ -56,6 +56,8 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private ITradeRepository tradeRepository;
 
+        private IWithdrawInfoRepository withdrawInfoRepository;
+
         private Channel<Block> blockStream;
 
         private Channel<Transaction> transactionStream;
@@ -83,6 +85,7 @@ namespace Bizanc.io.Matching.Core.Domain
                         ITransactionRepository transactionRepository,
                         IWithdrawalRepository withdrawalRepository,
                         ITradeRepository tradeRepository,
+                        IWithdrawInfoRepository withdrawInfoRepository,
                         IConnector connector)
         {
             this.peerListener = peerListener;
@@ -95,6 +98,7 @@ namespace Bizanc.io.Matching.Core.Domain
             this.transactionRepository = transactionRepository;
             this.withdrawalRepository = withdrawalRepository;
             this.tradeRepository = tradeRepository;
+            this.withdrawInfoRepository = withdrawInfoRepository;
             this.connector = connector;
         }
 
@@ -153,6 +157,7 @@ namespace Bizanc.io.Matching.Core.Domain
             await chain.Initialize(wallet.PublicKey);
 
             ProcessDeposits();
+            ProcessWithdrawInfo();
             ProcessOffers();
             ProcessTransactions();
             ProcessWithdrawal();
@@ -161,10 +166,12 @@ namespace Bizanc.io.Matching.Core.Domain
             if (!isOracle)
                 await peerListener.Start(listenPort);
 
-            var deposits = await connector.Start();
-
+            var (deposits, withdraws) = await connector.Start(await depositRepository.GetLastEthBlockNumber(), await withdrawInfoRepository.GetLastEthBlockNumber(), await depositRepository.GetLastBtcBlockNumber(), await withdrawInfoRepository.GetLastBtcBlockNumber());
             foreach (var deposit in deposits)
                 await AppendDeposit(deposit);
+
+            foreach (var withdraw in withdraws)
+                await AppendWithdraw(withdraw);
 
             ProcessBlocks();
             ProcessAccept("");
@@ -175,9 +182,16 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private async void ProcessDeposits()
         {
-            var reader = connector.GetChannelReader();
+            var reader = connector.GetDepositsReader();
             while (await reader.WaitToReadAsync())
                 await AppendDeposit(await reader.ReadAsync());
+        }
+
+        private async void ProcessWithdrawInfo()
+        {
+            var reader = connector.GetWithdrawsReader();
+            while (await reader.WaitToReadAsync())
+                await AppendWithdraw(await reader.ReadAsync());
         }
 
         private async void ProcessTransactions()
@@ -647,40 +661,37 @@ namespace Bizanc.io.Matching.Core.Domain
             while (await PersistStream.Reader.WaitToReadAsync())
             {
                 var pChain = await PersistStream.Reader.ReadAsync();
-                if (!pChain.Persisted)
+                try
                 {
-                    try
-                    {
-                        await persistLock.EnterWriteLock();
-                        var chainData = pChain.Get(40);
+                    await persistLock.EnterWriteLock();
+                    var chainData = pChain.Get(40);
 
-                        if (chainData != null)
+                    if (chainData != null && !chainData.Persisted)
+                    {
+                        Console.WriteLine("Persisting block " + pChain.CurrentBlock.Header.Depth);
+
+                        await blockRepository.Save(chainData.CurrentBlock);
+
+                        await depositRepository.Save(chainData.CurrentBlock.Deposits);
+                        await offerRepository.Save(chainData.BookManager.ProcessedOffers);
+                        await offerRepository.SaveCancel(chainData.CurrentBlock.OfferCancels);
+                        await transactionRepository.Save(chainData.CurrentBlock.Transactions);
+                        await withdrawalRepository.Save(chainData.CurrentBlock.Withdrawals);
+                        await tradeRepository.Save(chainData.BookManager.Trades);
+
+                        if (chainData.CurrentBlock.PreviousHashStr != "")
                         {
-                            Console.WriteLine("Persisting block " + pChain.CurrentBlock.Header.Depth);
-
-                            await blockRepository.Save(chainData.CurrentBlock);
-
-                            await depositRepository.Save(chainData.CurrentBlock.Deposits);
-                            await offerRepository.Save(chainData.BookManager.ProcessedOffers);
-                            await offerRepository.SaveCancel(chainData.CurrentBlock.OfferCancels);
-                            await transactionRepository.Save(chainData.CurrentBlock.Transactions);
-                            await withdrawalRepository.Save(chainData.CurrentBlock.Withdrawals);
-                            await tradeRepository.Save(chainData.BookManager.Trades);
-
-                            if (chainData.CurrentBlock.PreviousHashStr != "")
-                            {
-                                await balanceRepository.Save(chainData.TransactManager.Balance);
-                                await bookRepository.Save(chainData.BookManager);
-                                await blockRepository.SavePersistInfo(new BlockPersistInfo() { BlockHash = chainData.CurrentBlock.HashStr, TimeStamp = DateTime.Now });
-                            }
-
-                            Cleanup(pChain);
+                            await balanceRepository.Save(chainData.TransactManager.Balance);
+                            await bookRepository.Save(chainData.BookManager);
+                            await blockRepository.SavePersistInfo(new BlockPersistInfo() { BlockHash = chainData.CurrentBlock.HashStr, TimeStamp = DateTime.Now });
                         }
+
+                        Cleanup(pChain);
                     }
-                    finally
-                    {
-                        persistLock.ExitWriteLock();
-                    }
+                }
+                finally
+                {
+                    persistLock.ExitWriteLock();
                 }
             }
         }
@@ -1128,6 +1139,12 @@ namespace Bizanc.io.Matching.Core.Domain
                 }
         }
 
+        private async Task AppendWithdraw(WithdrawInfo withdraw)
+        {
+            if (!await withdrawInfoRepository.Contains(withdraw.HashStr))
+                await withdrawInfoRepository.Save(withdraw);
+        }
+
         public async Task<Transaction> GetTransationById(string id)
         {
             Transaction result = await chain.Pool.GetTransaction(id);
@@ -1245,6 +1262,11 @@ namespace Bizanc.io.Matching.Core.Domain
                 result = await withdrawalRepository.Get(id);
 
             return result;
+        }
+
+        public async Task<WithdrawInfo> GetWithdrawInfoById(string id)
+        {
+            return await withdrawInfoRepository.Get(id);
         }
 
         public async Task<IList<Withdrawal>> ListWithdrawals(int size)

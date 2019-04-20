@@ -47,9 +47,31 @@ namespace Bizanc.io.Matching.Api.Controllers
         /// </param>
         /// <response code="200">Success</response>
         [HttpGet("{id}")]
-        public async Task<Withdrawal> Get([FromRoute]string id)
+        public async Task<WithdrawInfoModel> Get([FromRoute]string id)
         {
-            return await repository.GetWithdrawalById(id);
+            WithdrawInfoModel result = null;
+            var wd = await repository.GetWithdrawalById(id);
+
+            if (wd != null)
+            {
+                result = new WithdrawInfoModel()
+                {
+                    Asset = wd.Asset,
+                    HashStr = wd.HashStr,
+                    Mined = wd.Mined,
+                    Signature = wd.Signature,
+                    Size = wd.Size,
+                    SourceWallet = wd.SourceWallet,
+                    TargetWallet = wd.TargetWallet,
+                    Timestamp = wd.TimeStampTicks
+                };
+
+                var info = await repository.GetWithdrawInfoById(id);
+                if (info != null)
+                    result.TxHash = info.TxHash;
+            }
+
+            return result;
         }
 
         /// <summary>

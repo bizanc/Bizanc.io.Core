@@ -25,6 +25,24 @@ namespace Bizanc.io.Matching.Infra.Repository
             }
         }
 
+        public async Task<string> GetLastEthBlockNumber()
+        {
+            using (var s = Store.OpenAsyncSession())
+            {
+                var dp = s.Query<Deposit>().Where(d => d.Asset != "BTC").OrderByDescending(d => d.Timestamp).Select(d => d.BlockNumber);
+                return await dp.FirstOrDefaultAsync();
+            }
+        }
+
+        public async Task<string> GetLastBtcBlockNumber()
+        {
+            using (var s = Store.OpenAsyncSession())
+            {
+                var dp = s.Query<Deposit>().Where(d => d.Asset == "BTC").OrderByDescending(d => d.Timestamp).Select(d => d.BlockNumber);
+                return await dp.FirstOrDefaultAsync();
+            }
+        }
+
         public async Task<Deposit> Get(string dpHash)
         {
             using (var s = Store.OpenAsyncSession())

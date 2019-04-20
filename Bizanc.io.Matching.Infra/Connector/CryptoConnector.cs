@@ -23,64 +23,62 @@ namespace Bizanc.io.Matching.Infra.Connector
     public class CryptoConnector : IConnector
     {
         private EthereumConnector ethConnector = new EthereumConnector();
-        private BitcoinConnector btcConnector = new BitcoinConnector();
-        private Channel<Deposit> stream;
-        public ChannelReader<Deposit> GetChannelReader()
-        {
-            return stream.Reader;
-        }
+        private BitcoinConnector btcConnector;
+        private Channel<Deposit> depositStream;
+        private Channel<WithdrawInfo> withdrawStream;
+        public ChannelReader<Deposit> GetDepositsReader() => depositStream.Reader;
+        public ChannelReader<WithdrawInfo> GetWithdrawsReader() => withdrawStream.Reader;
 
         public CryptoConnector()
         {
-            stream = Channel.CreateUnbounded<Deposit>();
+            depositStream = Channel.CreateUnbounded<Deposit>();
+            withdrawStream = Channel.CreateUnbounded<WithdrawInfo>();
+            btcConnector = new BitcoinConnector(depositStream, withdrawStream);
         }
 
-        public async Task<IEnumerable<Deposit>> Start()
+        public async Task<(IEnumerable<Deposit>, IEnumerable<WithdrawInfo>)> Start(string ethDepositBlockNumber, string ethWithdrawBlockNumber, string btcDepositBlockNumber, string btcWithdrawBlockNumber)
         {
-            var eth = await LoadETH();
-            //var btc = await LoadBTC();
-            ProcessEth();
-            //ProcessBtc();
+            var deposits = new List<Deposit>();
+            var withdraws = new List<WithdrawInfo>();
 
-            //eth.AddRange(btc);
-            return eth;
+            deposits.AddRange(await LoadETHDeposits(ethDepositBlockNumber));
+            withdraws.AddRange(await LoadETHWithdraws(ethWithdrawBlockNumber));
+            var (d, w) = await LoadBTC(btcDepositBlockNumber, btcWithdrawBlockNumber);
+
+            deposits.AddRange(d);
+            withdraws.AddRange(w);
+            ProcessETHDeposits();
+            ProcessETHWithdraws();
+
+            return (deposits, withdraws);
         }
 
-        private async Task<List<Deposit>> LoadETH()
+        private async Task<List<Deposit>> LoadETHDeposits(string blockNumber)
         {
-            var ethStartup = await ethConnector.Startup();
+            var ethStartup = await ethConnector.StartupDeposits(blockNumber);
 
             while (ethStartup == null)
-                ethStartup = await ethConnector.Startup();
+                ethStartup = await ethConnector.StartupDeposits(blockNumber);
 
             Console.WriteLine(ethStartup.Count + " ETH deposits loaded");
 
             return ethStartup;
         }
 
-        private async Task<List<Deposit>> LoadBTC()
+        private async Task<(List<Deposit>, List<WithdrawInfo>)> LoadBTC(string btcDepositBlockNumber, string btcWithdrawBlockNumber)
         {
-            List<Deposit> btcDeposits = null;
+            var (deposits, withdraws) = await btcConnector.Start(btcDepositBlockNumber, btcWithdrawBlockNumber);
 
-            while (btcDeposits == null)
-            {
-                try
-                {
-                    Console.WriteLine("Reading BTC Deposits.....");
-                    btcDeposits = await btcConnector.GetBtcDeposit();
-                    Console.WriteLine(btcDeposits.Count + " BTC Deposits found.");
-                    return btcDeposits;
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.ToString());
-                }
-            }
+            while (deposits == null)
+                (deposits, withdraws) = await btcConnector.Start(btcDepositBlockNumber, btcWithdrawBlockNumber);
 
-            return new List<Deposit>();
+            Console.WriteLine(deposits.Count + " BTC deposits loaded");
+            Console.WriteLine(withdraws.Count + " BTC withdraws loaded");
+
+            return (deposits, withdraws);
         }
 
-        private async void ProcessEth()
+        private async void ProcessETHDeposits()
         {
             while (true)
             {
@@ -88,9 +86,9 @@ namespace Bizanc.io.Matching.Infra.Connector
                 try
                 {
                     Console.WriteLine("Reading ETH Deposits.....");
-                    var ethDeposits = await ethConnector.GetEthDeposit();
+                    var ethDeposits = await ethConnector.GetDeposits();
                     Console.WriteLine(ethDeposits.Count + " ETH Deposits found.");
-                    ethDeposits.ForEach(async d => await stream.Writer.WriteAsync(d));
+                    ethDeposits.ForEach(async d => await depositStream.Writer.WriteAsync(d));
                 }
                 catch (Exception e)
                 {
@@ -100,19 +98,33 @@ namespace Bizanc.io.Matching.Infra.Connector
                 }
 
                 if (success)
-                    await Task.Delay(15000);
+                    await Task.Delay(3000);
             }
         }
 
-        private async void ProcessBtc()
+        private async Task<List<WithdrawInfo>> LoadETHWithdraws(string blockNumber)
+        {
+            var ethStartup = await ethConnector.StartupWithdraws(blockNumber);
+
+            while (ethStartup == null)
+                ethStartup = await ethConnector.StartupWithdraws(blockNumber);
+
+            Console.WriteLine(ethStartup.Count + " ETH withdraws loaded");
+
+            return ethStartup;
+        }
+
+        private async void ProcessETHWithdraws()
         {
             while (true)
             {
                 var success = true;
                 try
                 {
-                    var btcDeposits = await LoadBTC();
-                    btcDeposits.ForEach(async d => await stream.Writer.WriteAsync(d));
+                    Console.WriteLine("Reading ETH Withdraws.....");
+                    var ethWithdaws = await ethConnector.GetWithdaws();
+                    Console.WriteLine(ethWithdaws.Count + " ETH Withdraws found.");
+                    ethWithdaws.ForEach(async d => await withdrawStream.Writer.WriteAsync(d));
                 }
                 catch (Exception e)
                 {
@@ -122,23 +134,8 @@ namespace Bizanc.io.Matching.Infra.Connector
                 }
 
                 if (success)
-                    await Task.Delay(15000);
+                    await Task.Delay(3000);
             }
-        }
-
-        public async Task<WithdrawInfo> WithdrawEth(string recipient, decimal amount, string symbol)
-        {
-            return await ethConnector.WithdrawEth(recipient, amount, symbol);
-        }
-
-        public async Task<WithdrawInfo> WithdrawBtc(string recipient, decimal amount)
-        {
-            return await btcConnector.WithdrawBtc(recipient, amount);
-        }
-
-        public string DepositBtc(string btcPubKey, string recipient, decimal amount)
-        {
-            return btcConnector.DepositBtc(btcPubKey, recipient, amount);
         }
     }
 }
