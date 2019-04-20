@@ -6,159 +6,181 @@ using Bizanc.io.Matching.Core.Connector;
 using Bizanc.io.Matching.Core.Util;
 using System.Threading;
 using NBitcoin;
-using QBitNinja.Client;
 using System.Text;
 using System.Linq;
 using System.Collections.Generic;
+using NBitcoin.Policy;
+using QBitNinja.Client.Models;
+using NBitcoin.Indexer;
+using NBXplorer;
+using NBXplorer.Models;
+using System.Threading.Channels;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {
     public class BitcoinConnector
     {
-        private BitcoinSecret testAddress = new BitcoinSecret("cUmr2tP4KXsGseYA53F3kLRtqPKxtJ9ofPbgAeAd8qxKjPSz9pCd");
+        private AddressTrackedSource oracleAddress = TrackedSource.Create(new BitcoinPubKeyAddress("miMFy5fpKvUTYxVuHm3xPRQ5xyzpTFDbxS"));
 
+        ExplorerClient client = new ExplorerClient(new NBXplorerNetworkProvider(NetworkType.Testnet).GetBTC(), new Uri("http://seed.bizanc.io:24445"));
+        WebsocketNotificationSession session;
 
-        private QBitNinjaClient QClient = new QBitNinjaClient(Network.TestNet);
+        private int? lastBlockDeposits = 0;
+        private int? lastBlockWithdraws = 0;
 
-        public async Task<List<Deposit>> GetBtcDeposit()
+        private Channel<Deposit> depositStream;
+        private Channel<WithdrawInfo> withdrawStream;
+
+        private CancellationToken cancel;
+
+        public BitcoinConnector(Channel<Deposit> depositStream, Channel<WithdrawInfo> withdrawStream)
         {
-            return await Task.Run<List<Deposit>>(delegate
-            {
-                var deposits = new List<Deposit>();
-                var txOperations = QClient.GetBalance(dest: testAddress).Result.Operations;
-                var isDeposit = false;
-
-                foreach (var op in txOperations)
-                {
-                    var address = "";
-                    var transaction = QClient.GetTransaction(op.TransactionId).Result;
-
-                    foreach (var coin in transaction.ReceivedCoins)
-                    {
-                        if (coin.Amount.Equals(Money.Zero))
-                        {
-                            var script = coin.GetScriptCode().ToString();
-                            script = script.Replace("OP_RETURN ", "");
-                            address = HexToString(script);
-                            isDeposit = true;
-                        }
-                    }
-
-                    if (isDeposit)
-                    {
-                        var deposit = new Deposit();
-                        deposit.TargetWallet = address;
-                        deposit.Asset = "BTC";
-                        deposit.Quantity = op.Amount.ToDecimal((MoneyUnit)100000000);
-                        deposit.TxHash = op.TransactionId.ToString();
-
-                        deposits.Add(deposit);
-                    }
-                }
-
-                return deposits;
-            });
+            client.SetNoAuth();
+            this.depositStream = depositStream;
+            this.withdrawStream = withdrawStream;
         }
 
-        public async Task<WithdrawInfo> WithdrawBtc(string recipient, decimal amount)
+        public async Task<(List<Deposit>, List<WithdrawInfo>)> Start(string blockNumberDeposits, string blockNumberWithdraws)
         {
-            return await Task.Run<WithdrawInfo>(delegate
+            cancel = new CancellationToken();
+            await client.WaitServerStartedAsync();
+            session = await client.CreateWebsocketNotificationSessionAsync();
+            session.ListenTrackedSources(new[] { oracleAddress });
+            ProcessNotifications();
+
+            var oldTx = (await client.GetTransactionsAsync(oracleAddress)).ConfirmedTransactions.Transactions;
+
+            int heigth = 0;
+            if (!string.IsNullOrEmpty(blockNumberDeposits))
+                heigth = int.Parse(blockNumberDeposits);
+
+            if (heigth > 0)
             {
-                var txOperations = QClient.GetBalance(dest: testAddress, unspentOnly: true).Result.Operations;
-
-                var coins = new List<Coin>();
-
-                foreach (var op in txOperations)
-                    op.ReceivedCoins.ForEach(c => coins.Add((Coin)c));
-
-                coins.Sort(delegate (Coin x, Coin y)
-                {
-                    return -x.Amount.CompareTo(y.Amount);
-                });
-
-                var coinSum = 0m;
-
-                for (int i = 0; coinSum < amount; i++)
-                {
-                    coinSum += coins[i].Amount.ToDecimal(MoneyUnit.BTC);
-                    if (coinSum >= amount)
-                        coins.RemoveRange(i + 1, coins.Count - (i + 1));
-                }
-
-                var builder = new TransactionBuilder();
-                var destination = new BitcoinPubKeyAddress(recipient, Network.TestNet);
-                NBitcoin.Transaction tx = builder
-                                    .AddCoins(coins)
-                                    .AddKeys(testAddress)
-                                    .Send(destination, Money.Coins(amount))
-                                    .SetChange(testAddress)
-                                    .SendFees(Money.Coins(0.0001m))
-                                    .BuildTransaction(sign: true);
-
-                if (builder.Verify(tx))
-                {
-                    var broadcastResult = QClient.Broadcast(tx).Result;
-                    return new WithdrawInfo() { TxHash = tx.GetHash().ToString(), Timestamp = DateTime.Now };
-                }
-            
-                return null;
-            });
+                oldTx = oldTx.Where(t => t.Height > heigth).ToList();
+                return ProcessOperations(oldTx);
+            }
+            else
+                return ProcessOperations(oldTx);
         }
 
-        public string DepositBtc(string btcPubKey, string recipient, decimal amount)
+        private async void ProcessNotifications()
         {
-            var address = new BitcoinPubKeyAddress(btcPubKey, Network.TestNet);
-            //var address = new BitcoinSecret(btcPubKey);
-            var txOperations = QClient.GetBalance(dest: address, unspentOnly: true).Result.Operations;
+            while (!cancel.IsCancellationRequested)
+            {
+                var evt = (NewTransactionEvent)(await session.NextEventAsync(cancel));
 
-            var coins = new List<Coin>();
+                if (evt.TransactionData.Confirmations > 0)
+                    WaitConfirmations(evt.TransactionData.TransactionHash);
+            }
+        }
+
+        private async void WaitConfirmations(uint256 tx)
+        {
+            while (!cancel.IsCancellationRequested)
+            {
+                try
+                {
+                    var op = await client.GetTransactionAsync(oracleAddress, tx, cancel);
+
+                    if (op.BalanceChange < Money.Zero)
+                    {
+                        await withdrawStream.Writer.WriteAsync(ProcessWithdraw(op));
+                        return;
+                    }
+                    else if (op.Confirmations >= 3)
+                    {
+                        await depositStream.Writer.WriteAsync(ProcessDeposit(op));
+                        return;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Failde to load transaction confirmation: " + e.ToString());
+                }
+                await Task.Delay(3000);
+            }
+        }
+
+        public (List<Deposit>, List<WithdrawInfo>) ProcessOperations(List<TransactionInformation> txOperations)
+        {
+            var deposits = new List<Deposit>();
+            var withdraws = new List<WithdrawInfo>();
 
             foreach (var op in txOperations)
-                op.ReceivedCoins.ForEach(c => coins.Add((Coin)c));
+                if (op.BalanceChange > Money.Zero)
+                {
+                    if (op.Confirmations >= 3)
+                        deposits.Add(ProcessDeposit(op));
+                    else
+                        WaitConfirmations(op.TransactionId);
+                }
+                else if (op.BalanceChange < Money.Zero)
+                    withdraws.Add(ProcessWithdraw(op));
 
-            coins.Sort(delegate (Coin x, Coin y)
+            return (deposits, withdraws);
+        }
+
+        private Deposit ProcessDeposit(TransactionInformation transaction)
+        {
+            try
             {
-                return -x.Amount.CompareTo(y.Amount);
-            });
-
-            var coinSum = 0m;
-
-            for (int i = 0; coinSum < amount; i++)
+                var deposit = new Deposit();
+                deposit.TargetWallet = GetScriptString(transaction.Transaction);
+                deposit.Asset = "BTC";
+                deposit.AssetId = "0x0";
+                deposit.Quantity = transaction.BalanceChange.ToDecimal(MoneyUnit.BTC);
+                deposit.TxHash = transaction.TransactionId.ToString();
+                deposit.Timestamp = DateTime.Now;
+                deposit.BlockNumber = transaction.Height.ToString();
+                lastBlockDeposits = transaction.Height;
+                return deposit;
+            }
+            catch (Exception e)
             {
-                coinSum += coins[i].Amount.ToDecimal(MoneyUnit.BTC);
-                if (coinSum >= amount)
-                    coins.RemoveRange(i + 1, coins.Count - (i + 1));
+                Console.WriteLine("Failed to process deposit : " + e.ToString());
             }
 
-            var builder = new TransactionBuilder();
-            var destination = new BitcoinPubKeyAddress(recipient, Network.TestNet);
-            NBitcoin.Transaction tx = builder
-                                .AddCoins(coins)
-                                //.AddKeys(testAddress)
-                                .Send(destination, Money.Coins(amount))
-                                .SetChange(address)
-                                .SendFees(Money.Coins(0.0001m))
-                                .BuildTransaction(sign: false);
+            return null;
+        }
 
-            tx.Outputs.Add(new TxOut
+        public WithdrawInfo ProcessWithdraw(TransactionInformation transaction)
+        {
+            try
             {
-                Value = Money.Zero,
-                ScriptPubKey = TxNullDataTemplate.Instance.GenerateScriptPubKey(Encoding.UTF8.GetBytes(recipient))
-            });
-
-            foreach (var input in tx.Inputs)
+                var withdraw = new WithdrawInfo();
+                withdraw.HashStr = GetScriptString(transaction.Transaction);
+                withdraw.TxHash = transaction.TransactionId.ToString();
+                withdraw.BlockNumber = transaction.Height.ToString();
+                withdraw.Timestamp = DateTime.Now;
+                withdraw.Asset = "BTC";
+                lastBlockWithdraws = transaction.Height;
+                return withdraw;
+            }
+            catch (Exception e)
             {
-                input.ScriptSig = address.ScriptPubKey;
+                Console.WriteLine("Failed to process withdraw : " + e.ToString());
             }
 
-            var txhash = tx.ToHex();
+            return null;
+        }
 
-            if (builder.Verify(tx))
+        private string GetScriptString(NBitcoin.Transaction transaction)
+        {
+            var output = transaction.Outputs.FirstOrDefault(c => c.Value.Equals(Money.Zero));
+            if (output == null)
+                throw new Exception("Transaction without integration output:  " + transaction.GetHash().ToString());
+
+            try
             {
-                var broadcastResult = QClient.Broadcast(tx).Result;
+                var coin = new NBitcoin.Coin(transaction, output);
+                var script = coin.GetScriptCode().ToString();
+                script = script.Replace("OP_RETURN ", "");
+                return HexToString(script);
             }
-
-            return tx.ToHex();
+            catch (Exception e)
+            {
+                throw new Exception("Failed to process transaction output", e);
+            }
         }
 
         public static string HexToString(string InputText)

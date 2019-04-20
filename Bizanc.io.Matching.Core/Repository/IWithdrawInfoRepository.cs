@@ -5,20 +5,14 @@ using Bizanc.io.Matching.Core.Domain;
 
 namespace Bizanc.io.Matching.Core.Repository
 {
-    public interface IDepositRepository: IBaseRepository<Deposit>
+    public interface IWithdrawInfoRepository: IBaseRepository<WithdrawInfo>
     {
         Task<bool> Contains(string hashStr);
 
-        Task<List<Deposit>> GetLast(int size);
+        Task<WithdrawInfo> Get(string hashStr);
 
         Task<string> GetLastEthBlockNumber();
 
         Task<string> GetLastBtcBlockNumber();
-
-        Task<Deposit> Get(string txHash);
-
-        Task<Deposit> GetByTxHash(string txHash);
-
-        Task<List<Deposit>> GetByTarget(string wallet, int size);
     }
 }

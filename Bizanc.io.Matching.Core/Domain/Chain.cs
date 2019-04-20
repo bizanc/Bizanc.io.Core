@@ -169,7 +169,7 @@ namespace Bizanc.io.Matching.Core.Domain
         public async Task<List<Withdrawal>> GetAllWithdrawals(int skip)
         {
             var result = new List<Withdrawal>();
-            
+
             GetBlocksNewToOld().Skip(5).ToList().ForEach(b => result.AddRange(b.Withdrawals));
             return await Task.FromResult(result);
         }
@@ -705,7 +705,6 @@ namespace Bizanc.io.Matching.Core.Domain
             if (block.TransactionsDictionary.Count > 0)
             {
                 Console.WriteLine("Validating transactions...");
-                //Thread.Sleep(300 * slCount);
                 slCount++;
                 var foundMineTransaction = false;
 
@@ -1039,7 +1038,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public bool CanFork(Block block, int count = 0)
         {
-            if (count > 20)
+            if (count == 20)
                 return false;
 
             if (block.Header.PreviousBlockHash == null && block.TransactionsDictionary.Count == 0)
