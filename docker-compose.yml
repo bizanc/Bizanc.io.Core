@@ -7,6 +7,11 @@ services:
     ports:
       - 3001:5556
       - 4000:5001
+    volumes:
+      - "biznode_datadir:/app/RavenDB"
+
+volumes:
+  biznode_datadir: 
     # environment:
     #   - MASTER=TRUE
   # node1:
