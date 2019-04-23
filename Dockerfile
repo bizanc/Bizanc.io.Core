@@ -11,4 +11,6 @@ RUN dotnet publish Bizanc.io.Matching.App/Bizanc.io.Matching.App.csproj -c Relea
 FROM mcr.microsoft.com/dotnet/core/aspnet:2.2.4
 WORKDIR /app
 COPY --from=build-env app/Bizanc.io.Matching.App/out ./
+
+VOLUME /app/RavenDB
 ENTRYPOINT ["dotnet", "Bizanc.io.Matching.App.dll"]

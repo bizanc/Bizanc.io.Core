@@ -84,9 +84,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 var success = true;
                 try
                 {
-                    Console.WriteLine("Reading ETH Deposits.....");
                     var ethDeposits = await ethConnector.GetDeposits();
-                    Console.WriteLine(ethDeposits.Count + " ETH Deposits found.");
                     ethDeposits.ForEach(async d => await depositStream.Writer.WriteAsync(d));
                 }
                 catch (Exception e)
@@ -120,9 +118,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 var success = true;
                 try
                 {
-                    Console.WriteLine("Reading ETH Withdraws.....");
                     var ethWithdaws = await ethConnector.GetWithdaws();
-                    Console.WriteLine(ethWithdaws.Count + " ETH Withdraws found.");
                     ethWithdaws.ForEach(async d => await withdrawStream.Writer.WriteAsync(d));
                 }
                 catch (Exception e)
