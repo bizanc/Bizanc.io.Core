@@ -10,8 +10,6 @@ using System.Text;
 using System.Linq;
 using System.Collections.Generic;
 using NBitcoin.Policy;
-using QBitNinja.Client.Models;
-using NBitcoin.Indexer;
 using NBXplorer;
 using NBXplorer.Models;
 using System.Threading.Channels;
