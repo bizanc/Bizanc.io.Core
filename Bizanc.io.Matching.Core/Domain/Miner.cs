@@ -141,10 +141,13 @@ namespace Bizanc.io.Matching.Core.Domain
             {
                 foreach (var persistInfo in persistPoints)
                 {
+                    var balance = balances.Where(b => b.BlockHash == persistInfo.BlockHash).FirstOrDefault();
+                    var book = books.Where(b => b.BlockHash == persistInfo.BlockHash).FirstOrDefault();
+                    if(balance == null)
+                        continue;
+
                     var block = await blockRepository.Get(persistInfo.BlockHash);
                     var lastBLock = await blockRepository.Get(block.PreviousHashStr);
-                    var balance = balances.Where(b => b.BlockHash == persistInfo.BlockHash).First();
-                    var book = books.Where(b => b.BlockHash == persistInfo.BlockHash).First();
                     var transact = new Immutable.TransactionManager(balance);
                     book = new Immutable.Book(book, transact);
                     var deposit = new Immutable.Deposit(null, transact);
@@ -385,9 +388,9 @@ namespace Bizanc.io.Matching.Core.Domain
                     Console.WriteLine("Cleaning persist point " + persistPoint.CurrentBlock.PreviousHashStr);
                     try
                     {
+                        await blockRepository.CleanPersistInfo();
                         await balanceRepository.Clean();
                         await bookRepository.Clean();
-                        await blockRepository.CleanPersistInfo();
                     }
                     catch (Exception e)
                     {
