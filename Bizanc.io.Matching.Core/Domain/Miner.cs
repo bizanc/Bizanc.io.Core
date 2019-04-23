@@ -658,9 +658,14 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private async void ProcessPersist()
         {
-            while (await PersistStream.Reader.WaitToReadAsync())
+            Chain retry = null;
+            while (retry != null || await PersistStream.Reader.WaitToReadAsync())
             {
-                var pChain = await PersistStream.Reader.ReadAsync();
+                Chain pChain = null;
+                if(retry != null)
+                    pChain = retry;
+                else
+                    pChain = await PersistStream.Reader.ReadAsync();
                 try
                 {
                     await persistLock.EnterWriteLock();
@@ -687,7 +692,14 @@ namespace Bizanc.io.Matching.Core.Domain
                         }
 
                         Cleanup(pChain);
+                        retry = null;
                     }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Failed to persist and cleanup block: " + pChain.CurrentBlock.Header.Depth);
+                    Console.WriteLine(e.ToString());
+                    retry = pChain;
                 }
                 finally
                 {

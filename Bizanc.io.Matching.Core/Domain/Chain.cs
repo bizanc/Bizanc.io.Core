@@ -705,7 +705,7 @@ namespace Bizanc.io.Matching.Core.Domain
             if (block.TransactionsDictionary.Count > 0)
             {
                 Console.WriteLine("Validating transactions...");
-                slCount++;
+            slCount++;
                 var foundMineTransaction = false;
 
                 Transaction miningTransaction = null;

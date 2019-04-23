@@ -30,6 +30,11 @@ namespace Bizanc.io.Matching.Infra.Connector
         private Nethereum.Hex.HexTypes.HexBigInteger currentBlockDeposits = null;
         private Nethereum.Hex.HexTypes.HexBigInteger currentBlockWithdraws = null;
 
+        private NewFilterInput depositFilter;
+
+        private NewFilterInput withdrawFilter;
+
+
         public async Task<List<Deposit>> StartupDeposits(string blockNumber)
         {
             List<Deposit> deposits = null;
@@ -47,8 +52,8 @@ namespace Bizanc.io.Matching.Infra.Connector
                 }
 
                 var lastBlock = new HexBigInteger((await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync()).Value - 5);
-                var startupFilter = logDepositEvent.CreateFilterInput(parameter, new BlockParameter(lastBlock));
-                deposits = await GetDeposits(startupFilter);
+                depositFilter = logDepositEvent.CreateFilterInput(parameter, new BlockParameter(lastBlock));
+                deposits = await GetDeposits(depositFilter);
                 currentBlockDeposits = lastBlock;
             }
             catch (Exception e)
@@ -61,7 +66,7 @@ namespace Bizanc.io.Matching.Infra.Connector
 
         public async Task<List<WithdrawInfo>> StartupWithdraws(string blockNumber)
         {
-            List<WithdrawInfo> deposits = null;
+            List<WithdrawInfo> withdraws = null;
             try
             {
                 var startupLog = new List<Nethereum.Contracts.EventLog<Bizanc.io.Matching.Infra.Connector.LogDepositEvent>>();
@@ -76,8 +81,8 @@ namespace Bizanc.io.Matching.Infra.Connector
                 }
 
                 var lastBlock = new HexBigInteger(await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync());
-                var startupFilter = logWithdrawEvent.CreateFilterInput(parameter, new BlockParameter(lastBlock));
-                deposits = await GetWithdraws(startupFilter);
+                withdrawFilter = logWithdrawEvent.CreateFilterInput(parameter, new BlockParameter(lastBlock));
+                withdraws = await GetWithdraws(withdrawFilter);
                 currentBlockWithdraws = lastBlock;
             }
             catch (Exception e)
@@ -85,7 +90,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 Console.WriteLine("Ethereum Connector Startp Failed: " + e.ToString());
             }
 
-            return deposits;
+            return withdraws;
         }
 
         private async Task<List<Deposit>> GetDeposits(NewFilterInput filter)
@@ -141,7 +146,6 @@ namespace Bizanc.io.Matching.Infra.Connector
 
         public async Task<List<Deposit>> GetDeposits()
         {
-            var depositFilter = logDepositEvent.CreateFilterInput();
             depositFilter.FromBlock = new BlockParameter(currentBlockDeposits);
             var lastBlock = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
             lastBlock = new HexBigInteger(lastBlock.Value - 5);
@@ -153,7 +157,6 @@ namespace Bizanc.io.Matching.Infra.Connector
 
         public async Task<List<WithdrawInfo>> GetWithdaws()
         {
-            var withdrawFilter = logWithdrawEvent.CreateFilterInput();
             withdrawFilter.FromBlock = new BlockParameter(currentBlockWithdraws);
             var lastBlock = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
             withdrawFilter.ToBlock = new BlockParameter(lastBlock);
