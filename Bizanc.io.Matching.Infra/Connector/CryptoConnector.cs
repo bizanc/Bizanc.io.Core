@@ -12,7 +12,6 @@ using Nethereum.ABI.FunctionEncoding.Attributes;
 using System.Threading;
 using Nethereum.Hex.HexTypes;
 using NBitcoin;
-using QBitNinja.Client;
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Concurrent;

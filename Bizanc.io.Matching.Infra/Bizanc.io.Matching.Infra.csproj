@@ -5,12 +5,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NBitcoin.Indexer" Version="3.0.0.11" />
     <PackageReference Include="nbxplorer.client" Version="2.0.0.6" />
-    <PackageReference Include="Nethereum.Geth" Version="2.5.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="qbitninja.client" Version="1.0.3.47" />
-    <PackageReference Include="RavenDB.Embedded" Version="4.1.2" />
+    <PackageReference Include="Nethereum.Geth" Version="3.2.0" />
+    <PackageReference Include="RavenDB.Embedded" Version="4.1.5" />
   </ItemGroup>
 
   <PropertyGroup>
