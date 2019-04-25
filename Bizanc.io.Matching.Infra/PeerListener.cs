@@ -12,8 +12,14 @@ namespace Bizanc.io.Matching.Infra
     public class PeerListener : IPeerListener
     {
         private TcpListener listener;
+        private int listenPort;
+
+        public PeerListener(int listenPort)
+        {
+            this.listenPort = listenPort;
+        }
         
-        public async Task Start(int listenPort)
+        public async Task Start()
         {
             listener = new TcpListener(IPAddress.IPv6Any, listenPort);
             listener.Server.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
@@ -21,7 +27,8 @@ namespace Bizanc.io.Matching.Infra
             {
                 //Only supported on Windows, other platforms thows exception.
                 listener.AllowNatTraversal(true);
-            } catch { }
+            }
+            catch { }
 
             listener.Start();
 

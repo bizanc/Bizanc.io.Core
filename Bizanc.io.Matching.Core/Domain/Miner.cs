@@ -102,34 +102,15 @@ namespace Bizanc.io.Matching.Core.Domain
             this.connector = connector;
         }
 
-        public async Task Start(bool isOracle = false)
+        public async Task Start(bool isOracle = false, string minerAddress = "")
         {
             this.isOracle = isOracle;
-            wallet = await walletRepository.Get();
+
             blockStream = Channel.CreateUnbounded<Block>();
             transactionStream = Channel.CreateUnbounded<Transaction>();
             offerStream = Channel.CreateUnbounded<Offer>();
             withdrawalStream = Channel.CreateUnbounded<Withdrawal>();
             PersistStream = Channel.CreateUnbounded<Chain>();
-
-            if (wallet == null)
-            {
-                var pair = CryptoHelper.CreateKeyPair();
-
-                wallet = new Wallet() { PrivateKey = pair.Item1, PublicKey = pair.Item2 };
-                await walletRepository.Save(wallet);
-
-                Console.WriteLine("Wallet Generated");
-            }
-            else
-            {
-                Console.WriteLine("Wallet Recoved");
-            }
-
-            Console.WriteLine("Private " + wallet.PrivateKey);
-            Console.WriteLine("Public " + wallet.PublicKey);
-
-            Console.WriteLine("Initiling Empty Chain");
 
             var persistPoints = (await blockRepository.GetPersistInfo()).OrderBy(p => p.TimeStamp).ToList();
             var balances = await balanceRepository.Get();
@@ -143,7 +124,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 {
                     var balance = balances.Where(b => b.BlockHash == persistInfo.BlockHash).FirstOrDefault();
                     var book = books.Where(b => b.BlockHash == persistInfo.BlockHash).FirstOrDefault();
-                    if(balance == null)
+                    if (balance == null)
                         continue;
 
                     var block = await blockRepository.Get(persistInfo.BlockHash);
@@ -157,7 +138,41 @@ namespace Bizanc.io.Matching.Core.Domain
                 }
             }
 
-            await chain.Initialize(wallet.PublicKey);
+            if (!isOracle)
+            {
+                await peerListener.Start();
+                ProcessAccept("");
+
+                if (string.IsNullOrEmpty(minerAddress))
+                {
+                    wallet = await walletRepository.Get();
+                    if (wallet == null)
+                    {
+                        var pair = CryptoHelper.CreateKeyPair();
+
+                        wallet = new Wallet() { PrivateKey = pair.Item1, PublicKey = pair.Item2 };
+                        await walletRepository.Save(wallet);
+
+                        Console.WriteLine("Wallet Generated");
+                        Console.WriteLine("Public " + wallet.PublicKey);
+                        Console.WriteLine("Private " + wallet.PrivateKey);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Wallet Recoved");
+                        Console.WriteLine("Public " + wallet.PublicKey);
+                    }
+                }
+                else
+                {
+                    wallet = new Wallet() { PublicKey = minerAddress };
+                    Console.WriteLine("Wallet Received");
+                    Console.WriteLine("Public " + wallet.PublicKey);
+                }
+                await chain.Initialize(wallet.PublicKey);
+            }
+            else
+                await chain.Initialize("");
 
             ProcessDeposits();
             ProcessWithdrawInfo();
@@ -165,9 +180,6 @@ namespace Bizanc.io.Matching.Core.Domain
             ProcessTransactions();
             ProcessWithdrawal();
             ProcessPersist();
-
-            if (!isOracle)
-                await peerListener.Start(listenPort);
 
             var (deposits, withdraws) = await connector.Start(await depositRepository.GetLastEthBlockNumber(), await withdrawInfoRepository.GetLastEthBlockNumber(), await depositRepository.GetLastBtcBlockNumber(), await withdrawInfoRepository.GetLastBtcBlockNumber());
             foreach (var deposit in deposits)
@@ -177,7 +189,6 @@ namespace Bizanc.io.Matching.Core.Domain
                 await AppendWithdraw(withdraw);
 
             ProcessBlocks();
-            ProcessAccept("");
 
             if (!isOracle)
                 ProcessMining();
@@ -665,7 +676,7 @@ namespace Bizanc.io.Matching.Core.Domain
             while (retry != null || await PersistStream.Reader.WaitToReadAsync())
             {
                 Chain pChain = null;
-                if(retry != null)
+                if (retry != null)
                     pChain = retry;
                 else
                     pChain = await PersistStream.Reader.ReadAsync();

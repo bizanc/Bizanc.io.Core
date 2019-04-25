@@ -19,13 +19,12 @@ namespace Bizanc.io.Matching.Infra.Connector
 {
     public class EthereumConnector
     {
-        private static Web3Geth web3 = new Web3Geth("https://rinkeby.infura.io/v3/f2478498dd8c423ea9065f07a0c110ca"); // Testnet
+        private static Web3Geth web3; 
 
         private static string abi = @"[ { 'constant': false, 'inputs': [ { 'name': 'destination', 'type': 'string' }, { 'name': 'token', 'type': 'address' } ], 'name': 'depositERC20', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': 'withdrawHash', 'type': 'string' }, { 'name': 'to', 'type': 'address' }, { 'name': 'origin', 'type': 'address' }, { 'name': 'value', 'type': 'uint256' }, { 'name': 'token', 'type': 'address' } ], 'name': 'withdrawERC20', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': 'withdrawHash', 'type': 'string' }, { 'name': 'to', 'type': 'address' }, { 'name': 'origin', 'type': 'address' }, { 'name': 'value', 'type': 'uint256' } ], 'name': 'withdrawEth', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': '_address', 'type': 'address' } ], 'name': 'denyAccess', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': '_address', 'type': 'address' } ], 'name': 'allowAccess', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': 'destination', 'type': 'string' } ], 'name': 'depositEth', 'outputs': [], 'payable': true, 'stateMutability': 'payable', 'type': 'function' }, { 'anonymous': false, 'inputs': [ { 'indexed': false, 'name': 'from', 'type': 'address' }, { 'indexed': false, 'name': 'destination', 'type': 'string' }, { 'indexed': false, 'name': 'amount', 'type': 'uint256' }, { 'indexed': false, 'name': 'asset', 'type': 'string' }, { 'indexed': false, 'name': 'assetId', 'type': 'address' } ], 'name': 'logDeposit', 'type': 'event' }, { 'anonymous': false, 'inputs': [ { 'indexed': false, 'name': 'withdrawHash', 'type': 'string' }, { 'indexed': false, 'name': 'to', 'type': 'address' }, { 'indexed': false, 'name': 'origin', 'type': 'address' }, { 'indexed': false, 'name': 'amount', 'type': 'uint256' }, { 'indexed': false, 'name': 'asset', 'type': 'string' }, { 'indexed': false, 'name': 'assetId', 'type': 'address' } ], 'name': 'logWithdrawal', 'type': 'event' }, { 'anonymous': false, 'inputs': [ { 'indexed': true, 'name': '_address', 'type': 'address' } ], 'name': 'AllowAccessEvent', 'type': 'event' }, { 'anonymous': false, 'inputs': [ { 'indexed': true, 'name': '_address', 'type': 'address' } ], 'name': 'DenyAccessEvent', 'type': 'event' } ]";
-        private static string contractAddress = "0xf246b043f492e66eBae298508f3e6f4a643242F9";
-        private static Contract contract = web3.Eth.GetContract(abi, contractAddress);
-        private static Event logDepositEvent = contract.GetEvent("logDeposit");
-        private static Event logWithdrawEvent = contract.GetEvent("logWithdrawal");
+        private static Contract contract;
+        private static Event logDepositEvent;
+        private static Event logWithdrawEvent;
         private Nethereum.Hex.HexTypes.HexBigInteger currentBlockDeposits = null;
         private Nethereum.Hex.HexTypes.HexBigInteger currentBlockWithdraws = null;
 
@@ -33,6 +32,13 @@ namespace Bizanc.io.Matching.Infra.Connector
 
         private NewFilterInput withdrawFilter;
 
+
+        public EthereumConnector(string oracleAddress, string endpoint){
+            web3 = new Web3Geth(endpoint);
+            contract = web3.Eth.GetContract(abi, oracleAddress);
+            logDepositEvent = contract.GetEvent("logDeposit");
+            logWithdrawEvent = contract.GetEvent("logWithdrawal");
+        }
 
         public async Task<List<Deposit>> StartupDeposits(string blockNumber)
         {

@@ -18,9 +18,9 @@ namespace Bizanc.io.Matching.Infra.Connector
 {
     public class BitcoinConnector
     {
-        private AddressTrackedSource oracleAddress = TrackedSource.Create(new BitcoinPubKeyAddress("miMFy5fpKvUTYxVuHm3xPRQ5xyzpTFDbxS"));
+        private AddressTrackedSource oracleAddress;
 
-        ExplorerClient client = new ExplorerClient(new NBXplorerNetworkProvider(NetworkType.Testnet).GetBTC(), new Uri("http://seed.bizanc.io:24445"));
+        ExplorerClient client;
         WebsocketNotificationSession session;
 
         private int? lastBlockDeposits = 0;
@@ -30,12 +30,13 @@ namespace Bizanc.io.Matching.Infra.Connector
         private Channel<WithdrawInfo> withdrawStream;
 
         private CancellationToken cancel;
-
-        public BitcoinConnector(Channel<Deposit> depositStream, Channel<WithdrawInfo> withdrawStream)
+        public BitcoinConnector(string oracleAddress, string endpoint, Channel<Deposit> depositStream, Channel<WithdrawInfo> withdrawStream)
         {
-            client.SetNoAuth();
             this.depositStream = depositStream;
             this.withdrawStream = withdrawStream;
+            this.oracleAddress = TrackedSource.Create(new BitcoinPubKeyAddress(oracleAddress));
+            client = new ExplorerClient(new NBXplorerNetworkProvider(NetworkType.Testnet).GetBTC(), new Uri(endpoint));
+            client.SetNoAuth();
         }
 
         public async Task<(List<Deposit>, List<WithdrawInfo>)> Start(string blockNumberDeposits, string blockNumberWithdraws)

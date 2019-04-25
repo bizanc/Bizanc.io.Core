@@ -21,18 +21,19 @@ namespace Bizanc.io.Matching.Infra.Connector
 {
     public class CryptoConnector : IConnector
     {
-        private EthereumConnector ethConnector = new EthereumConnector();
+        private EthereumConnector ethConnector;
         private BitcoinConnector btcConnector;
         private Channel<Deposit> depositStream;
         private Channel<WithdrawInfo> withdrawStream;
         public ChannelReader<Deposit> GetDepositsReader() => depositStream.Reader;
         public ChannelReader<WithdrawInfo> GetWithdrawsReader() => withdrawStream.Reader;
 
-        public CryptoConnector()
+        public CryptoConnector(string oracleETHAddress, string oracleBTCAddress, string ETHEndpoint, string BTCEndpoint)
         {
             depositStream = Channel.CreateUnbounded<Deposit>();
             withdrawStream = Channel.CreateUnbounded<WithdrawInfo>();
-            btcConnector = new BitcoinConnector(depositStream, withdrawStream);
+            btcConnector = new BitcoinConnector(oracleBTCAddress, BTCEndpoint, depositStream, withdrawStream);
+            ethConnector = new EthereumConnector(oracleETHAddress, ETHEndpoint);
         }
 
         public async Task<(IEnumerable<Deposit>, IEnumerable<WithdrawInfo>)> Start(string ethDepositBlockNumber, string ethWithdrawBlockNumber, string btcDepositBlockNumber, string btcWithdrawBlockNumber)

@@ -6,7 +6,17 @@
     <ProjectReference Include="..\Bizanc.io.Matching.Api\Bizanc.io.Matching.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+   <None Include="appsettings.json" CopyToPublishDirectory="Always" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.AzureKeyVault" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="2.2.0" />
+  </ItemGroup>
+
   <PropertyGroup>
+    <UserSecretsId>0605332-596d-4aaa-98b5-fcb33529825e</UserSecretsId>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <LangVersion>7.3</LangVersion>

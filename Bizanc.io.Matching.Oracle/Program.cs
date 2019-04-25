@@ -9,28 +9,34 @@ using Bizanc.io.Matching.Core.Crypto;
 using Bizanc.io.Matching.Infra.Repository;
 using Bizanc.io.Matching.Infra.Connector;
 using System.Collections.Generic;
+using Microsoft.Extensions.Configuration;
+using System.IO;
 
 namespace Bizanc.io.Matching.Oracle
 {
+    class NodeConfig
+    {
+        public string Network { get; set; }
+        public int ListenPort { get; set; }
+        public string SeedAddress { get; set; }
+        public int SeedPort { get; set; }
+        public string OracleBTCAddres { get; set; }
+        public string OracleETHAddres { get; set; }
+        public string BTCEndpoint { get; set; }
+        public string ETHEndpoint { get; set; }
+        public bool Mine { get; set; }
+        public string ApiEndpoint { get; set; }
+    }
+
     class Program
     {
-        private static string privateKeyEth = "0x2952a82db5058f4b61cb283db47a767cf8f7157fe0144b9575b1b117495241f3";
-
-        private static async void StartApi(Miner miner)
-        {
-            await Task.Run(() =>
-            {
-                Api.Program.Start(miner);
-            });
-        }
-
         private static WithdrawInfoRepository repository;
 
-        private static async void WithdrawListener(Miner miner, CryptoConnector connector)
+        private static async void WithdrawListener(Miner miner, CryptoConnector connector, string btcSecret, string ethSecret, NodeConfig conf)
         {
             var withdrwawalDictionary = new Dictionary<string, Withdrawal>();
-            var ethConnector = new EthereumOracleConnector();
-            var btcConnector = new BitcoinOracleConnector();
+            var ethConnector = new EthereumOracleConnector(ethSecret, conf.ETHEndpoint, conf.OracleETHAddres);
+            var btcConnector = new BitcoinOracleConnector(conf.Network, conf.BTCEndpoint, btcSecret);
 
             await Task.Run(async () =>
             {
@@ -50,7 +56,7 @@ namespace Bizanc.io.Matching.Oracle
                                     if (wd.Asset == "BTC")
                                         result = await btcConnector.WithdrawBtc(wd.HashStr, wd.TargetWallet, wd.Size);
                                     else
-                                        result = await ethConnector.WithdrawEth(privateKeyEth, wd.HashStr, wd.TargetWallet, wd.Size, wd.Asset);
+                                        result = await ethConnector.WithdrawEth(wd.HashStr, wd.TargetWallet, wd.Size, wd.Asset);
 
                                     if (result != null)
                                     {
@@ -72,54 +78,49 @@ namespace Bizanc.io.Matching.Oracle
             });
         }
 
-        async static Task Main()
+        async static Task Main(string[] args)
         {
-            var CryptoConnector = new CryptoConnector();
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddCommandLine(args);
+
+#if DEBUG
+            builder = builder.AddUserSecrets<Program>();
+#else
+            builder = builder.AddAzureKeyVault("TestnetVaultBiz");
+#endif
+
+
+            IConfigurationRoot configuration = builder.Build();
+
+            var conf = new NodeConfig();
+            configuration.GetSection("Node").Bind(conf);
             repository = new WithdrawInfoRepository();
-            var miner = new Miner(new PeerListener(), new WalletRepository(),
+            var connector = new CryptoConnector(conf.OracleETHAddres, conf.OracleBTCAddres, conf.ETHEndpoint, conf.BTCEndpoint);
+            var miner = new Miner(new PeerListener(conf.ListenPort), new WalletRepository(),
             new BlockRepository(), new BalanceRepository(), new BookRepository(),
             new DepositRepository(), new OfferRepository(), new TransactionRepository(),
             new WithdrawalRepository(), new TradeRepository(), repository,
-            CryptoConnector);
+            connector);
 
             await miner.Start(true);
 
-            WithdrawListener(miner, CryptoConnector);
+            WithdrawListener(miner, connector, configuration.GetValue<string>("BTCSECRET"), configuration.GetValue<string>("ETHSECRET"), conf);
 
-            var master = Environment.GetEnvironmentVariable("MASTER");
-            if (master != null)
+            if (!string.IsNullOrEmpty(conf.SeedAddress) && conf.SeedPort > 0)
             {
-                if (master.ToUpper() != "TRUE")
+                try
                 {
-                    try
-                    {
-                        var seednode = new Peer(new TcpClient("masternode", 5556));
-                        miner.Connect(seednode);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.ToString());
-                    }
+                    var seednode = new Peer(new TcpClient(conf.SeedAddress, conf.SeedPort));
+                    miner.Connect(seednode);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                    throw;
                 }
             }
-            else
-            {
-                Console.WriteLine("No Master Variable");
-                var seednode = new Peer(new TcpClient("localhost", 5556));
-                miner.Connect(seednode);
-
-                // try
-                // {
-                //     var seednode = new Peer(new TcpClient("bizanc.io", 443));
-                //     await miner.Connect(seednode);
-                // }
-                // catch (Exception e)
-                // {
-                //     Console.WriteLine("Failed to connect seed: \n"+e.ToString());
-                // }
-
-            }
-
             await Task.Delay(Timeout.Infinite);
         }
     }
