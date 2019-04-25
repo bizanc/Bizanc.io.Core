@@ -17,9 +17,18 @@ namespace Bizanc.io.Matching.Infra.Connector
 {
     public class BitcoinOracleConnector
     {
-        private BitcoinSecret wallet = new BitcoinSecret("cUJ9aAeteswkQXK3XXb8SMUxsbNBxCFJurS9SUqKRdaNC7qA6PL1");
+        private BitcoinSecret wallet;
 
-        private ExplorerClient client = new ExplorerClient(new NBXplorerNetworkProvider(NetworkType.Testnet).GetBTC(), new Uri("http://seed.bizanc.io:24445"));
+        private ExplorerClient client;
+
+        private NetworkType network;
+
+        public BitcoinOracleConnector(string network, string endpoint, string secret)
+        {
+            this.network = network == "testnet" ? NetworkType.Testnet : NetworkType.Mainnet;
+            client = new ExplorerClient(new NBXplorerNetworkProvider(this.network).GetBTC(), new Uri(endpoint));
+            wallet = new BitcoinSecret(secret);
+        }
 
         public async Task<WithdrawInfo> WithdrawBtc(string withdrawHash, string recipient, decimal amount)
         {
@@ -44,8 +53,18 @@ namespace Bizanc.io.Matching.Infra.Connector
                     coins.RemoveRange(i + 1, coins.Count - (i + 1));
             }
 
-            var builder = Network.TestNet.CreateTransactionBuilder();
-            var destination = new BitcoinPubKeyAddress(recipient, Network.TestNet);
+            TransactionBuilder builder = null;
+            BitcoinPubKeyAddress destination = null;
+            if (network == NetworkType.Testnet)
+            {
+                builder = Network.TestNet.CreateTransactionBuilder();
+                destination = new BitcoinPubKeyAddress(recipient, Network.TestNet);
+            }
+            else
+            {
+                builder = Network.Main.CreateTransactionBuilder();
+                destination = new BitcoinPubKeyAddress(recipient, Network.Main);
+            }
             NBitcoin.Transaction tx = builder
                                 .AddCoins(coins)
                                 .AddKeys(wallet)

@@ -16,20 +16,46 @@ using System.Net.Sockets;
 
 namespace Bizanc.io.Matching.Api
 {
+    class NodeConfig
+    {
+        public string Network { get; set; }
+        public int ListenPort { get; set; }
+        public string SeedAddress { get; set; }
+        public int SeedPort { get; set; }
+        public string OracleBTCAddres { get; set; }
+        public string OracleETHAddres { get; set; }
+        public string BTCEndpoint { get; set; }
+        public string ETHEndpoint { get; set; }
+        public bool Mine { get; set; }
+        public string ApiEndpoint { get; set; }
+    }
+
     public class Program
     {
+
         public static void Main(string[] args)
         {
             BuildWebHost(args).Run();
         }
 
-        private static Miner StartMiner()
+        private static Miner StartMiner(string[] args)
         {
-            var miner = new Miner(new PeerListener(), new WalletRepository(),
-            new BlockRepository(), new BalanceRepository(), new BookRepository(),
-            new DepositRepository(), new OfferRepository(), new TransactionRepository(),
-            new WithdrawalRepository(), new TradeRepository(), new WithdrawInfoRepository(),
-            new CryptoConnector());
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddCommandLine(args);
+
+            IConfigurationRoot configuration = builder.Build();
+
+            var conf = new NodeConfig();
+            configuration.GetSection("Node").Bind(conf);
+            conf.ToString();
+
+            var miner = new Miner(new PeerListener(conf.ListenPort), new WalletRepository(),
+             new BlockRepository(), new BalanceRepository(), new BookRepository(),
+             new DepositRepository(), new OfferRepository(), new TransactionRepository(),
+             new WithdrawalRepository(), new TradeRepository(), new WithdrawInfoRepository(),
+             new CryptoConnector(conf.OracleETHAddres, conf.OracleBTCAddres, conf.ETHEndpoint, conf.BTCEndpoint));
 
             miner.Start(true).Wait();
 
@@ -45,16 +71,16 @@ namespace Bizanc.io.Matching.Api
                 .UseLibuv(c => c.ThreadCount = 4)
                 .ConfigureServices(servicesCollection =>
                     {
-                        servicesCollection.AddSingleton<IChainRepository>(StartMiner());
+                        servicesCollection.AddSingleton<IChainRepository>(StartMiner(args));
                     })
                 .UseStartup<Startup>()
                 .Build();
 
 
-        public static void Start(IChainRepository repository)
+        public static void Start(IChainRepository repository, string endpoint)
         {
             WebHost.CreateDefaultBuilder()
-                .UseUrls("http://0.0.0.0:5001")
+                .UseUrls(endpoint)
                 .ConfigureServices(servicesCollection =>
                     {
                         servicesCollection.AddSingleton<IChainRepository>(repository);

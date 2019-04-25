@@ -5,7 +5,7 @@ namespace Bizanc.io.Matching.Core.Domain
 {
     public interface IPeerListener
     {
-        Task Start(int listenPort);
+        Task Start();
 
         Task<IPeer> Connect(string address);
 
