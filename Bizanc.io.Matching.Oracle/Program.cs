@@ -88,10 +88,8 @@ namespace Bizanc.io.Matching.Oracle
 #if DEBUG
             builder = builder.AddUserSecrets<Program>();
 #else
-            builder = builder.AddAzureKeyVault("TestnetVaultBiz");
+            builder = builder.AddAzureKeyVault("https://testnetvaultbiz.vault.azure.net/");
 #endif
-
-
             IConfigurationRoot configuration = builder.Build();
 
             var conf = new NodeConfig();
