@@ -5,6 +5,7 @@ using System.Linq;
 using SimpleBase;
 using Bizanc.io.Matching.Core.Crypto;
 using Newtonsoft.Json;
+using Serilog;
 
 namespace Bizanc.io.Matching.Core.Domain.Immutable
 {
@@ -112,7 +113,7 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
                 }
             }
             else
-                Console.WriteLine("Wallet has no balance to send offer.");
+                Log.Error("Wallet has no balance to send offer.");
 
             if (result)
                 return (true, new Book(this, transact, dic, ProcessedOffers.AddRange(offers), Trades.AddRange(trades)));
@@ -158,7 +159,7 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
                 {
                     if (offer.Wallet != of.Wallet)
                     {
-                        Console.WriteLine("Invalide offer cancel, not owner");
+                        Log.Error("Invalide offer cancel, not owner");
                         return (false, this);
                     }
 

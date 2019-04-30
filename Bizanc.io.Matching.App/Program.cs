@@ -10,6 +10,9 @@ using Bizanc.io.Matching.Infra.Repository;
 using Bizanc.io.Matching.Infra.Connector;
 using Microsoft.Extensions.Configuration;
 using System.IO;
+using Serilog;
+using Serilog.Events;
+using Serilog.Core;
 
 namespace Bizanc.io.Matching.App
 {
@@ -49,7 +52,6 @@ namespace Bizanc.io.Matching.App
             var conf = new NodeConfig();
             configuration.GetSection("Node").Bind(conf);
 
-
             var miner = new Miner(new PeerListener(conf.ListenPort), new WalletRepository(),
             new BlockRepository(), new BalanceRepository(), new BookRepository(),
             new DepositRepository(), new OfferRepository(), new TransactionRepository(),
@@ -64,15 +66,17 @@ namespace Bizanc.io.Matching.App
             {
                 try
                 {
+                    Log.Information("Connecting to peer: " + conf.SeedAddress + ":" + conf.ListenPort);
                     var seednode = new Peer(new TcpClient(conf.SeedAddress, conf.ListenPort));
                     miner.Connect(seednode);
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.ToString());
-                    throw;
+                    Log.Error(e.ToString());
                 }
             }
+
+            Log.CloseAndFlush();
 
             await Task.Delay(Timeout.Infinite);
         }

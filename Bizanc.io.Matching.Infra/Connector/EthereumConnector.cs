@@ -14,6 +14,7 @@ using Nethereum.Hex.HexTypes;
 using NBitcoin;
 using System.Linq;
 using System.Collections.Generic;
+using Serilog;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {
@@ -51,7 +52,7 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                 if (!string.IsNullOrEmpty(blockNumber))
                 {
-                    Console.WriteLine("Reading Eth Events from block " + blockNumber);
+                    Log.Information("Reading Eth Events from block " + blockNumber);
                     currentBlockDeposits = new HexBigInteger(blockNumber);
                     parameter = new BlockParameter(currentBlockDeposits);
                 }
@@ -63,7 +64,7 @@ namespace Bizanc.io.Matching.Infra.Connector
             }
             catch (Exception e)
             {
-                Console.WriteLine("Ethereum Connector Startp Failed: " + e.ToString());
+                Log.Error("Ethereum Connector Startp Failed: " + e.ToString());
             }
 
             return deposits;
@@ -80,7 +81,7 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                 if (!string.IsNullOrEmpty(blockNumber))
                 {
-                    Console.WriteLine("Reading Eth Events from block " + blockNumber);
+                    Log.Information("Reading Eth Events from block " + blockNumber);
                     currentBlockWithdraws = new HexBigInteger(blockNumber);
                     parameter = new BlockParameter(currentBlockWithdraws);
                 }
@@ -92,7 +93,7 @@ namespace Bizanc.io.Matching.Infra.Connector
             }
             catch (Exception e)
             {
-                Console.WriteLine("Ethereum Connector Startp Failed: " + e.ToString());
+                Log.Error("Ethereum Connector Startp Failed: " + e.ToString());
             }
 
             return withdraws;

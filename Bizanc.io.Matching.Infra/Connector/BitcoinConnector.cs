@@ -13,6 +13,7 @@ using NBitcoin.Policy;
 using NBXplorer;
 using NBXplorer.Models;
 using System.Threading.Channels;
+using Serilog;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {
@@ -94,7 +95,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Failde to load transaction confirmation: " + e.ToString());
+                    Log.Error("Failde to load transaction confirmation: " + e.ToString());
                 }
                 await Task.Delay(3000);
             }
@@ -136,7 +137,7 @@ namespace Bizanc.io.Matching.Infra.Connector
             }
             catch (Exception e)
             {
-                Console.WriteLine("Failed to process deposit : " + e.ToString());
+                Log.Error("Failed to process deposit : " + e.ToString());
             }
 
             return null;
@@ -157,7 +158,7 @@ namespace Bizanc.io.Matching.Infra.Connector
             }
             catch (Exception e)
             {
-                Console.WriteLine("Failed to process withdraw : " + e.ToString());
+                Log.Error("Failed to process withdraw : " + e.ToString());
             }
 
             return null;

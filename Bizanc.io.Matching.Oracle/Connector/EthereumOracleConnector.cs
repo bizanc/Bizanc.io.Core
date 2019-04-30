@@ -14,6 +14,7 @@ using Nethereum.Hex.HexTypes;
 using NBitcoin;
 using System.Linq;
 using System.Collections.Generic;
+using Serilog;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {
@@ -43,7 +44,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 if (symbol == "ETH")
                 {
                     Function withdrawEth = contract.GetFunction("withdrawEth");
-                    Console.WriteLine("Sending ETH Withdrawal...");
+                    Log.Warning("Sending ETH Withdrawal...");
                     receipt = await withdrawEth.SendTransactionAndWaitForReceiptAsync(account.Address,             // Sender
                                                                                         new HexBigInteger(900000),  // Gas
                                                                                         null,
@@ -57,7 +58,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 if (symbol == "TBRL")
                 {
                     Function withdrawERC20 = contract.GetFunction("withdrawERC20");
-                    Console.WriteLine("Sending TBRL Withdrawal...");
+                    Log.Warning("Sending TBRL Withdrawal...");
                     receipt = await withdrawERC20.SendTransactionAndWaitForReceiptAsync(account.Address,             // Sender
                                                                                         new HexBigInteger(900000),  // Gas
                                                                                         null,
@@ -72,16 +73,16 @@ namespace Bizanc.io.Matching.Infra.Connector
                 if (receipt != null)
                 {
                     if (receipt.HasErrors() != null && ((bool)receipt.HasErrors()))
-                        Console.WriteLine("Withdrawal Error, Hash: " + withdrawHash);
+                        Log.Error("Withdrawal Error, Hash: " + withdrawHash);
                     else
-                        Console.WriteLine("Withdrawal Success: " + withdrawHash);
+                        Log.Warning("Withdrawal Success: " + withdrawHash);
 
                     return new WithdrawInfo() { Asset = symbol, HashStr = withdrawHash, TxHash = receipt.TransactionHash, Timestamp = DateTime.Now, BlockNumber = receipt.BlockNumber.HexValue };
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Log.Error(e.ToString());
             }
 
             return null;

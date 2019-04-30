@@ -6,6 +6,7 @@ using SimpleBase;
 using Bizanc.io.Matching.Core.Crypto;
 using Newtonsoft.Json;
 using System.Threading;
+using Serilog;
 
 namespace Bizanc.io.Matching.Core.Domain.Immutable
 {
@@ -48,14 +49,14 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
                         balance = balance.ChangeBalance(output.Wallet, tx.Asset, output.Size);
                     else
                     {
-                        Console.WriteLine("Transaction with invalid output:");
-                        Console.WriteLine(JsonConvert.SerializeObject(tx));
+                        Log.Error("Transaction with invalid output:");
+                        Log.Error(JsonConvert.SerializeObject(tx));
                     }
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Failed to change wallet balance: \n" + e.ToString());
-                    Console.WriteLine(JsonConvert.SerializeObject(tx));
+                    Log.Error("Failed to change wallet balance: \n" + e.ToString());
+                    Log.Error(JsonConvert.SerializeObject(tx));
                 }
             }
 

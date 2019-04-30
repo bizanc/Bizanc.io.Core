@@ -17,6 +17,7 @@ using Bizanc.io.Matching.Core.Connector;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Bizanc.io.Matching.Core.Domain.Immutable;
+using Serilog;
 
 namespace Bizanc.io.Matching.Core.Domain
 {
@@ -100,6 +101,14 @@ namespace Bizanc.io.Matching.Core.Domain
             this.tradeRepository = tradeRepository;
             this.withdrawInfoRepository = withdrawInfoRepository;
             this.connector = connector;
+
+            Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .WriteTo.Console()
+            .WriteTo.File("log/bizancnode_log.txt",
+                rollingInterval: RollingInterval.Day,
+                rollOnFileSizeLimit: true)
+            .CreateLogger();
         }
 
         public async Task Start(bool isOracle = false, string minerAddress = "")
@@ -153,21 +162,20 @@ namespace Bizanc.io.Matching.Core.Domain
                         wallet = new Wallet() { PrivateKey = pair.Item1, PublicKey = pair.Item2 };
                         await walletRepository.Save(wallet);
 
-                        Console.WriteLine("Wallet Generated");
-                        Console.WriteLine("Public " + wallet.PublicKey);
-                        Console.WriteLine("Private " + wallet.PrivateKey);
+                        Log.Information("Wallet Generated");
+                        Log.Information("Public " + wallet.PublicKey);
                     }
                     else
                     {
-                        Console.WriteLine("Wallet Recoved");
-                        Console.WriteLine("Public " + wallet.PublicKey);
+                        Log.Information("Wallet Recoved");
+                        Log.Information("Public " + wallet.PublicKey);
                     }
                 }
                 else
                 {
                     wallet = new Wallet() { PublicKey = minerAddress };
-                    Console.WriteLine("Wallet Received");
-                    Console.WriteLine("Public " + wallet.PublicKey);
+                    Log.Information("Wallet Received");
+                    Log.Information("Public " + wallet.PublicKey);
                 }
                 await chain.Initialize(wallet.PublicKey);
             }
@@ -221,7 +229,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 var bk = await blockStream.Reader.ReadAsync();
                 if (await ProcessBlock(bk))
                 {
-                    Console.WriteLine("Received newer block");
+                    Log.Information("Received newer block");
                     Notify(bk);
                 }
             }
@@ -253,7 +261,7 @@ namespace Bizanc.io.Matching.Core.Domain
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Log.Error(e.ToString());
             }
         }
 
@@ -277,14 +285,14 @@ namespace Bizanc.io.Matching.Core.Domain
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(e.ToString());
+                        Log.Error(e.ToString());
                         msg = null;
                     }
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Log.Error(e.ToString());
             }
 
             await Disconnect(peer);
@@ -301,7 +309,7 @@ namespace Bizanc.io.Matching.Core.Domain
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString() + "\n" + msg);
+                Log.Error(e.ToString() + "\n" + msg);
                 throw;
             }
 
@@ -320,7 +328,6 @@ namespace Bizanc.io.Matching.Core.Domain
                         await Message(peer, hsk);
                         break;
                     case MessageType.Block:
-                        Console.WriteLine("Block Received");
                         await Message(peer, JsonConvert.DeserializeObject<Block>(msg, new JsonSerializerSettings
                         {
                             ObjectCreationHandling = ObjectCreationHandling.Replace
@@ -348,7 +355,6 @@ namespace Bizanc.io.Matching.Core.Domain
                         await Message(peer, JsonConvert.DeserializeObject<TransactionPoolResponse>(msg));
                         break;
                     case MessageType.BlockResponse:
-                        Console.WriteLine("Block Response Received");
                         var resp = JsonConvert.DeserializeObject<BlockResponse>(msg, new JsonSerializerSettings
                         {
                             ObjectCreationHandling = ObjectCreationHandling.Replace
@@ -370,7 +376,7 @@ namespace Bizanc.io.Matching.Core.Domain
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString() + "\n" + msg);
+                Log.Error(e.ToString() + "\n" + msg);
                 throw;
             }
         }
@@ -383,20 +389,20 @@ namespace Bizanc.io.Matching.Core.Domain
                 forks.TryRemove(item, out remove);
 
             if (toRemove.Count() > 0)
-                Console.WriteLine(toRemove.Count() + " old forks removed.");
+                Log.Debug(toRemove.Count() + " old forks removed.");
         }
 
         private async void Cleanup(Chain c)
         {
             var persistPoint = c.Cleanup();
-            Console.WriteLine("Current Depth " + c.CurrentBlock.Header.Depth);
+            Log.Debug("Current Depth " + c.CurrentBlock.Header.Depth);
             if (persistPoint != null)
             {
-                Console.WriteLine("Persisting and cleanup from depth " + persistPoint.CurrentBlock.Header.Depth);
+                Log.Debug("Persisting and cleanup from depth " + persistPoint.CurrentBlock.Header.Depth);
 
                 if (persistPoint.CurrentBlock != null && !string.IsNullOrEmpty(persistPoint.CurrentBlock.PreviousHashStr))
                 {
-                    Console.WriteLine("Cleaning persist point " + persistPoint.CurrentBlock.PreviousHashStr);
+                    Log.Information("Cleaning persist point " + persistPoint.CurrentBlock.PreviousHashStr);
                     try
                     {
                         await blockRepository.CleanPersistInfo();
@@ -405,19 +411,19 @@ namespace Bizanc.io.Matching.Core.Domain
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine("Failed to clean persist point: " + e.ToString());
+                        Log.Error("Failed to clean persist point: " + e.ToString());
                     }
 
-                    Console.WriteLine("Persist point Cleaned.");
+                    Log.Information("Persist point Cleaned.");
                 }
             }
             else
-                Console.WriteLine("Nothing to Clean");
+                Log.Debug("Nothing to Clean");
         }
 
         private async void ProcessMining()
         {
-            Console.WriteLine("ProcessMining");
+            Log.Debug("ProcessMining");
             if (isOracle)
                 return;
 
@@ -429,32 +435,32 @@ namespace Bizanc.io.Matching.Core.Domain
 
             if (newChain != null)
             {
-                Console.WriteLine("Getting miner commit lock.");
+                Log.Debug("Getting miner commit lock.");
                 try
                 {
                     await commitLocker.EnterWriteLock();
-                    Console.WriteLine("Got miner commit lock.");
+                    Log.Debug("Got miner commit lock.");
                     if (chain.Id == preChain.Id)
                     {
                         chain = newChain;
                         await newChain.UpdatePool();
 
-                        Console.WriteLine("Chain commited, starting cleanup");
+                        Log.Debug("Chain commited, starting cleanup");
                         Persist(newChain);
 
-                        Console.WriteLine("removing old forks");
+                        Log.Debug("removing old forks");
                         RemoveOldForks(newChain);
-                        Console.WriteLine("cleaned old forks");
+                        Log.Debug("cleaned old forks");
 
-                        Console.WriteLine("Mined Block, Notifying");
+                        Log.Information("Mined Block, Notifying");
 
-                        Console.WriteLine("Commit ProcessMining");
+                        Log.Debug("Commit ProcessMining");
                         Notify(newChain.CurrentBlock);
                         ProcessMining();
                     }
                     else
                     {
-                        Console.WriteLine("Mined Block, but pre chain changed, ignoring...");
+                        Log.Warning("Mined Block, but pre chain changed, ignoring...");
                         newChain = null;
                     }
                 }
@@ -464,7 +470,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 }
             }
 
-            Console.WriteLine("Finish ProcessMining");
+            Log.Debug("Finish ProcessMining");
         }
 
         private async Task<bool> ProcessBlock(Block block)
@@ -477,34 +483,34 @@ namespace Bizanc.io.Matching.Core.Domain
 
             try
             {
-                Console.WriteLine("Adding Block " + block.HashStr);
-                Console.WriteLine("Validating Block...");
+                Log.Debug("Adding Block " + block.HashStr);
+                Log.Debug("Validating Block...");
 
                 if (!CryptoHelper.IsValidHash(block.Header.Difficult, CryptoHelper.Hash(block.Header.ToString())))
                 {
-                    Console.WriteLine("Invalid Block Hash");
+                    Log.Error("Invalid Block Hash");
                     return false;
                 }
 
-                Console.WriteLine("Verifying deposits...");
+                Log.Debug("Verifying deposits...");
                 foreach (var dp in block.Deposits)
                 {
                     dp.BuildHash();
                     if (!await chain.Contains(dp) && !await depositRepository.Contains(dp.HashStr))
                     {
-                        Console.WriteLine("Block with invalid deposit");
+                        Log.Error("Block with invalid deposit");
                         return false;
                     }
                 }
 
-                Console.WriteLine("Deposits Verified, Appending Offers...");
+                Log.Debug("Deposits Verified, Appending Offers...");
                 foreach (var of in block.Offers)
                     await AppendOffer(of);
 
                 foreach (var of in block.OfferCancels)
                     await AppendOfferCancel(of);
 
-                Console.WriteLine("Offers Appended, Appending Transactions...");
+                Log.Debug("Offers Appended, Appending Transactions...");
 
                 if (block.TransactionsDictionary.Count > 100)
                 {
@@ -523,12 +529,12 @@ namespace Bizanc.io.Matching.Core.Domain
                     }
                 }
 
-                Console.WriteLine("Transactions Appended, Appending WIthdrawals...");
+                Log.Debug("Transactions Appended, Appending WIthdrawals...");
 
                 foreach (var wd in block.Withdrawals)
                     await AppendWithdrawal(wd);
 
-                Console.WriteLine("Withdrawals Appended, Appending Block...");
+                Log.Debug("Withdrawals Appended, Appending Block...");
 
                 var preChain = chain;
                 var newChain = await preChain.Append(block);
@@ -540,21 +546,21 @@ namespace Bizanc.io.Matching.Core.Domain
                         await commitLocker.EnterWriteLock();
                         if (preChain.Id == chain.Id)
                         {
-                            Console.WriteLine("Process block updating pool");
+                            Log.Debug("Process block updating pool");
                             chain = newChain;
                             await newChain.UpdatePool();
                             Persist(newChain);
-                            Console.WriteLine("Process block removing old forks");
+                            Log.Debug("Process block removing old forks");
                             RemoveOldForks(newChain);
-                            Console.WriteLine("Process Block cleaned old forks");
+                            Log.Debug("Process Block cleaned old forks");
 
-                            Console.WriteLine("Block Appended");
+                            Log.Information("Block Appended");
                             ProcessMining();
                             return true;
                         }
                         else
                         {
-                            Console.WriteLine("Cant Commit Append block, main chain changed....");
+                            Log.Warning("Cant Commit Append block, main chain changed....");
                         }
                     }
                     finally
@@ -564,20 +570,20 @@ namespace Bizanc.io.Matching.Core.Domain
                 }
 
 
-                Console.WriteLine("Can't append on main chain");
+                Log.Debug("Can't append on main chain");
 
                 if (forks.Count > 0)
                 {
-                    Console.WriteLine("Verifiyng existent forks...");
+                    Log.Debug("Verifiyng existent forks...");
 
                     foreach (var f in forks.Values)
                     {
-                        Console.WriteLine("Trying to append on existent forks...");
+                        Log.Debug("Trying to append on existent forks...");
                         var fork = await f.Append(block);
 
                         if (fork != null)
                         {
-                            Console.WriteLine("Appended on fork");
+                            Log.Information("Appended on fork");
 
                             if (fork.Count > chain.Count)
                             {
@@ -586,7 +592,7 @@ namespace Bizanc.io.Matching.Core.Domain
                                     await commitLocker.EnterWriteLock();
 
                                     chain.StopMining();
-                                    Console.WriteLine("Fork greater then main chain, replacing;");
+                                    Log.Warning("Fork greater then main chain, replacing;");
 
                                     forks.TryAdd(chain.Id, chain);
 
@@ -604,14 +610,14 @@ namespace Bizanc.io.Matching.Core.Domain
                                 }
 
                                 preChain.CancelToken = new CancellationTokenSource();
-                                Console.WriteLine("Chain commited, cleanup started");
+                                Log.Debug("Chain commited, cleanup started");
                                 Persist(fork);
                                 RemoveOldForks(fork);
                                 ProcessMining();
                             }
                             else
                             {
-                                Console.WriteLine("Adding new chain to forks.");
+                                Log.Debug("Adding new chain to forks.");
                                 forks.TryAdd(fork.Id, fork);
                                 Chain result = null;
                                 forks.TryRemove(f.Id, out result);
@@ -621,11 +627,11 @@ namespace Bizanc.io.Matching.Core.Domain
                             return true;
                         }
 
-                        Console.WriteLine("Cant append on fork.");
+                        Log.Debug("Cant append on fork.");
                     }
                 }
 
-                Console.WriteLine("Trying to fork main chain...");
+                Log.Debug("Trying to fork main chain...");
 
                 if (chain.CanFork(block))
                 {
@@ -644,7 +650,7 @@ namespace Bizanc.io.Matching.Core.Domain
                         commitLocker.ExitWriteLock();
                     }
 
-                    Console.WriteLine("Appending forked block");
+                    Log.Warning("Chain forked, Appending forked block");
                     var newFork = await fork.Append(block);
 
                     forks.TryAdd(newFork.Id, newFork);
@@ -652,19 +658,19 @@ namespace Bizanc.io.Matching.Core.Domain
                     forks.TryRemove(fork.Id, out result);
 
                     await newFork.UpdatePool();
-                    Console.WriteLine("Forked block appended");
+                    Log.Warning("Forked block appended");
                     fork.CancelToken = new CancellationTokenSource();
                     return true;
                 }
 
-                Console.WriteLine("Can't process block");
+                Log.Error("Can't process block");
 
                 return false;
             }
             catch (Exception e)
             {
-                Console.WriteLine("Falha ao processar bloco");
-                Console.WriteLine(e.ToString());
+                Log.Error("Falha ao processar bloco");
+                Log.Error(e.ToString());
             }
 
             return false;
@@ -687,7 +693,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
                     if (chainData != null && !chainData.Persisted)
                     {
-                        Console.WriteLine("Persisting block " + pChain.CurrentBlock.Header.Depth);
+                        Log.Debug("Persisting block " + pChain.CurrentBlock.Header.Depth);
 
                         await blockRepository.Save(chainData.CurrentBlock);
 
@@ -711,8 +717,8 @@ namespace Bizanc.io.Matching.Core.Domain
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Failed to persist and cleanup block: " + pChain.CurrentBlock.Header.Depth);
-                    Console.WriteLine(e.ToString());
+                    Log.Error("Failed to persist and cleanup block: " + pChain.CurrentBlock.Header.Depth);
+                    Log.Error(e.ToString());
                     retry = pChain;
                 }
                 finally
@@ -805,10 +811,9 @@ namespace Bizanc.io.Matching.Core.Domain
                         peerDictionary.TryRemove(sender.Id, out result);
                     }
 
-                    Console.WriteLine("Peer " + sender.Address + " disconnected.");
+                    Log.Information("Peer " + sender.Address + " disconnected.");
 
                     sender.Disconnect();
-                    Console.WriteLine("Removing Peer From Dictionary " + sender.Address);
                     Task.Delay(1000).ContinueWith(t => ReconnectTask(t, sender));
                 }
                 else
@@ -824,7 +829,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
             if (handShake.ListenPort == 0)
             {
-                Console.WriteLine("Received port 0 from " + sender.Address);
+                Log.Error("Received port 0 from " + sender.Address);
                 return;
             }
 
@@ -834,7 +839,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 peerDictionary.TryAdd(sender.Id, sender);
                 sender.StartHeartBeat();
 
-                Console.WriteLine("Total Peers:" + peerDictionary.Count + " New " + sender.Address);
+                Log.Information("Total Peers:" + peerDictionary.Count + " New " + sender.Address);
 
                 await GetBlocks((int)handShake.BlockLength, sender);
 
@@ -913,12 +918,12 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async Task Message(IPeer sender, BlockResponse blockResponse)
         {
-            Console.WriteLine("Received block message");
+            Log.Debug("Received block message");
             foreach (var block in blockResponse.Blocks)
             {
                 if (await ProcessBlock(block))
                 {
-                    Console.WriteLine("Received newer block");
+                    Log.Information("Received newer block");
                     Notify(block);
                 }
             }
@@ -1105,8 +1110,8 @@ namespace Bizanc.io.Matching.Core.Domain
             {
                 if (!CryptoHelper.IsValidSignature(of.ToString(), of.Wallet, of.Signature))
                 {
-                    Console.WriteLine("Offer with invalid signature");
-                    Console.WriteLine(of.ToString());
+                    Log.Error("Offer with invalid signature");
+                    Log.Error(of.ToString());
                     return false;
                 }
 
@@ -1133,8 +1138,8 @@ namespace Bizanc.io.Matching.Core.Domain
             {
                 if (!CryptoHelper.IsValidSignature(of.ToString(), of.Wallet, of.Signature))
                 {
-                    Console.WriteLine("Offer Cancel with invalid signature");
-                    Console.WriteLine(of.ToString());
+                    Log.Error("Offer Cancel with invalid signature");
+                    Log.Error(of.ToString());
                     return false;
                 }
 
@@ -1253,14 +1258,14 @@ namespace Bizanc.io.Matching.Core.Domain
             {
                 if (tx.Outputs.Any(o => o.Size < 0))
                 {
-                    Console.WriteLine("Transaction with invalid output");
+                    Log.Error("Transaction with invalid output");
                     return false;
                 }
 
                 if (!CryptoHelper.IsValidSignature(tx.ToString(), tx.Wallet, tx.Signature))
                 {
-                    Console.WriteLine("Transaction with invalid signature");
-                    Console.WriteLine(tx.ToString());
+                    Log.Error("Transaction with invalid signature");
+                    Log.Error(tx.ToString());
                     return false;
                 }
 
@@ -1361,8 +1366,8 @@ namespace Bizanc.io.Matching.Core.Domain
             {
                 if (!CryptoHelper.IsValidSignature(wd.ToString(), wd.SourceWallet, wd.Signature))
                 {
-                    Console.WriteLine("!!! Withdrawal with invalid signature !!!");
-                    Console.WriteLine(wd.ToString());
+                    Log.Error("!!! Withdrawal with invalid signature !!!");
+                    Log.Error(wd.ToString());
                     return false;
                 }
 

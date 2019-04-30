@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Bizanc.io.Matching.Core.Domain;
+using Serilog;
 
 namespace Bizanc.io.Matching.Infra
 {
@@ -32,7 +33,7 @@ namespace Bizanc.io.Matching.Infra
 
             listener.Start();
 
-            Console.WriteLine("Listener started...");
+            Log.Debug("Listener started...");
 
             await Task.CompletedTask;
         }
@@ -43,7 +44,7 @@ namespace Bizanc.io.Matching.Infra
             {
                 return await Task<Peer>.Run(() =>
                 {
-                    Console.WriteLine("Connectig to: " + address);
+                    Log.Debug("Connectig to: " + address);
 
                     var values = address.Split(':');
                     var port = values[values.Length - 1];
@@ -54,8 +55,8 @@ namespace Bizanc.io.Matching.Infra
             }
             catch (Exception e)
             {
-                Console.WriteLine("Failed to connect peer");
-                Console.WriteLine(e.ToString());
+                Log.Error("Failed to connect peer");
+                Log.Error(e.ToString());
             }
 
             return null;
@@ -65,16 +66,16 @@ namespace Bizanc.io.Matching.Infra
         {
             try
             {
-                Console.WriteLine("Accept ");
+                Log.Debug("Accept ");
                 var tcpClient = await listener.AcceptTcpClientAsync();
                 var peer = new Peer(tcpClient);
-                Console.WriteLine("Connection Received: " + peer.Address);
+                Log.Information("Connection Received: " + peer.Address);
 
                 return peer;
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Log.Error(e.ToString());
             }
 
             return null;
