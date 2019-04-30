@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Collections.Generic;
 using Bizanc.io.Matching.Core.Domain;
 using System.Threading.Tasks;
 using Bizanc.io.Matching.Infra;
@@ -13,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using System.IO;
 using Serilog;
 using Serilog.Events;
+using System.Threading.Channels;
 
 namespace Bizanc.io.Matching.Oracle
 {
@@ -34,50 +37,50 @@ namespace Bizanc.io.Matching.Oracle
     {
         private static WithdrawInfoRepository repository;
 
+        private static ChannelReader<Chain> reader;
+
         private static async void WithdrawListener(Miner miner, CryptoConnector connector, string btcSecret, string ethSecret, NodeConfig conf)
         {
             var withdrwawalDictionary = new Dictionary<string, Withdrawal>();
             var ethConnector = new EthereumOracleConnector(ethSecret, conf.ETHEndpoint, conf.OracleETHAddres);
             var btcConnector = new BitcoinOracleConnector(conf.Network, conf.BTCEndpoint, btcSecret);
 
-            await Task.Run(async () =>
+            while (await reader.WaitToReadAsync())
             {
-                while (true)
+                var chain = await reader.ReadAsync();
+                chain = chain.Get(5);
+                if (chain != null)
                 {
-                    var withdrawals = await miner.ListWithdrawals(100, 5);
-                    if (withdrawals.Count > 0)
+                    foreach (var wd in chain.CurrentBlock.Withdrawals)
                     {
-                        foreach (var wd in withdrawals)
+                        try
                         {
-                            try
+                            if (!withdrwawalDictionary.ContainsKey(wd.HashStr) && !(await repository.Contains(wd.HashStr)))
                             {
-                                if (!withdrwawalDictionary.ContainsKey(wd.HashStr) && !(await repository.Contains(wd.HashStr)))
+                                WithdrawInfo result = null;
+
+                                if (wd.Asset == "BTC")
+                                    result = await btcConnector.WithdrawBtc(wd.HashStr, wd.TargetWallet, wd.Size);
+                                else
+                                    result = await ethConnector.WithdrawEth(wd.HashStr, wd.TargetWallet, wd.Size, wd.Asset);
+
+                                if (result != null)
                                 {
-                                    WithdrawInfo result = null;
-
-                                    if (wd.Asset == "BTC")
-                                        result = await btcConnector.WithdrawBtc(wd.HashStr, wd.TargetWallet, wd.Size);
-                                    else
-                                        result = await ethConnector.WithdrawEth(wd.HashStr, wd.TargetWallet, wd.Size, wd.Asset);
-
-                                    if (result != null)
-                                    {
-                                        withdrwawalDictionary.Add(wd.HashStr, wd);
-                                        result.HashStr = wd.HashStr;
-                                        await repository.Save(result);
-                                    }
+                                    withdrwawalDictionary.Add(wd.HashStr, wd);
+                                    result.HashStr = wd.HashStr;
+                                    await repository.Save(result);
                                 }
                             }
-                            catch (Exception e)
-                            {
-                                Log.Error("Failed to withdrawal... \n" + e.ToString());
-                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error("Failed to withdrawal... \n" + e.ToString());
                         }
                     }
-
-                    await Task.Delay(1000);
                 }
-            });
+
+                await Task.Delay(1000);
+            }
         }
 
         async static Task Main(string[] args)
@@ -103,6 +106,8 @@ namespace Bizanc.io.Matching.Oracle
             new DepositRepository(), new OfferRepository(), new TransactionRepository(),
             new WithdrawalRepository(), new TradeRepository(), repository,
             connector);
+
+            reader = miner.GetChainStream();
 
             await miner.Start(true);
 

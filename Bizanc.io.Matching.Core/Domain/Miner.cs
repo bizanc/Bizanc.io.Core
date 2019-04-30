@@ -69,6 +69,10 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private Channel<Chain> PersistStream;
 
+        private Channel<Chain> chainUpdateStream;
+
+        private bool hasChainListner = false;
+
         private IConnector connector;
 
         private bool isOracle = false;
@@ -109,6 +113,8 @@ namespace Bizanc.io.Matching.Core.Domain
                 rollingInterval: RollingInterval.Day,
                 rollOnFileSizeLimit: true)
             .CreateLogger();
+
+            chainUpdateStream = Channel.CreateUnbounded<Chain>();
         }
 
         public async Task Start(bool isOracle = false, string minerAddress = "")
@@ -298,6 +304,12 @@ namespace Bizanc.io.Matching.Core.Domain
             await Disconnect(peer);
         }
 
+        public ChannelReader<Chain> GetChainStream()
+        {
+            hasChainListner = true;
+            return chainUpdateStream.Reader;
+        }
+
 
         private async Task ProcessMessage(IPeer peer, string msg, List<string> buffer)
         {
@@ -456,6 +468,9 @@ namespace Bizanc.io.Matching.Core.Domain
 
                         Log.Debug("Commit ProcessMining");
                         Notify(newChain.CurrentBlock);
+                        if (hasChainListner)
+                            await chainUpdateStream.Writer.WriteAsync(newChain);
+
                         ProcessMining();
                     }
                     else
@@ -555,6 +570,8 @@ namespace Bizanc.io.Matching.Core.Domain
                             Log.Debug("Process Block cleaned old forks");
 
                             Log.Information("Block Appended");
+                            if (hasChainListner)
+                                await chainUpdateStream.Writer.WriteAsync(newChain);
                             ProcessMining();
                             return true;
                         }
@@ -613,6 +630,8 @@ namespace Bizanc.io.Matching.Core.Domain
                                 Log.Debug("Chain commited, cleanup started");
                                 Persist(fork);
                                 RemoveOldForks(fork);
+                                if (hasChainListner)
+                                    await chainUpdateStream.Writer.WriteAsync(fork);
                                 ProcessMining();
                             }
                             else
