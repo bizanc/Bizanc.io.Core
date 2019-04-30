@@ -11,6 +11,8 @@ using Bizanc.io.Matching.Infra.Connector;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using System.IO;
+using Serilog;
+using Serilog.Events;
 
 namespace Bizanc.io.Matching.Oracle
 {
@@ -68,7 +70,7 @@ namespace Bizanc.io.Matching.Oracle
                             }
                             catch (Exception e)
                             {
-                                Console.WriteLine("Failed to withdrawal... \n" + e.ToString());
+                                Log.Error("Failed to withdrawal... \n" + e.ToString());
                             }
                         }
                     }
@@ -115,7 +117,7 @@ namespace Bizanc.io.Matching.Oracle
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.ToString());
+                    Log.Error(e.ToString());
                     throw;
                 }
             }

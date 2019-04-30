@@ -14,6 +14,7 @@ using Bizanc.io.Matching.Core.Domain;
 using Bizanc.io.Matching.Core.Domain.Messages;
 using Bizanc.io.Matching.Core.Util;
 using Newtonsoft.Json;
+using Serilog;
 
 namespace Bizanc.io.Matching.Infra
 {
@@ -83,7 +84,7 @@ namespace Bizanc.io.Matching.Infra
             {
                 if ((DateTime.Now - lastHeartBeat).Seconds >= 30000)
                 {
-                    Console.WriteLine("Peer Timeout: " + Address);
+                    Log.Error("Peer Timeout: " + Address);
                     await Disconnect();
                     return;
                 }
@@ -102,7 +103,7 @@ namespace Bizanc.io.Matching.Infra
                 var msg = Newtonsoft.Json.JsonConvert.SerializeObject(data);
 
                 if(data.MessageType ==  MessageType.Block)
-                    Console.WriteLine("Block size: "+Encoding.UTF8.GetByteCount(msg));
+                    Log.Debug("Block size: "+Encoding.UTF8.GetByteCount(msg));
 
                 await streamWriter.WriteLineAsync(msg);
                 await streamWriter.FlushAsync();
@@ -123,7 +124,7 @@ namespace Bizanc.io.Matching.Infra
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Log.Error(e.ToString());
             }
 
             return null;

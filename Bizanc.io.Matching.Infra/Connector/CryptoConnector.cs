@@ -16,6 +16,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using Serilog;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {
@@ -60,7 +61,7 @@ namespace Bizanc.io.Matching.Infra.Connector
             while (ethStartup == null)
                 ethStartup = await ethConnector.StartupDeposits(blockNumber);
 
-            Console.WriteLine(ethStartup.Count + " ETH deposits loaded");
+            Log.Information(ethStartup.Count + " ETH deposits loaded");
 
             return ethStartup;
         }
@@ -72,8 +73,8 @@ namespace Bizanc.io.Matching.Infra.Connector
             while (deposits == null)
                 (deposits, withdraws) = await btcConnector.Start(btcDepositBlockNumber, btcWithdrawBlockNumber);
 
-            Console.WriteLine(deposits.Count + " BTC deposits loaded");
-            Console.WriteLine(withdraws.Count + " BTC withdraws loaded");
+            Log.Information(deposits.Count + " BTC deposits loaded");
+            Log.Information(withdraws.Count + " BTC withdraws loaded");
 
             return (deposits, withdraws);
         }
@@ -90,7 +91,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.ToString());
+                    Log.Error(e.ToString());
                     success = false;
                     await Task.Delay(2000);
                 }
@@ -107,7 +108,7 @@ namespace Bizanc.io.Matching.Infra.Connector
             while (ethStartup == null)
                 ethStartup = await ethConnector.StartupWithdraws(blockNumber);
 
-            Console.WriteLine(ethStartup.Count + " ETH withdraws loaded");
+            Log.Information(ethStartup.Count + " ETH withdraws loaded");
 
             return ethStartup;
         }
@@ -124,7 +125,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.ToString());
+                    Log.Error(e.ToString());
                     success = false;
                     await Task.Delay(2000);
                 }

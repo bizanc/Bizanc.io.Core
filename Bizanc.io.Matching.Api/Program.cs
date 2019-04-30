@@ -13,6 +13,8 @@ using Bizanc.io.Matching.Infra;
 using Bizanc.io.Matching.Infra.Repository;
 using Bizanc.io.Matching.Infra.Connector;
 using System.Net.Sockets;
+using Serilog;
+using Serilog.Events;
 
 namespace Bizanc.io.Matching.Api
 {
@@ -73,6 +75,7 @@ namespace Bizanc.io.Matching.Api
                     {
                         servicesCollection.AddSingleton<IChainRepository>(StartMiner(args));
                     })
+                .UseSerilog()
                 .UseStartup<Startup>()
                 .Build();
 
@@ -86,6 +89,7 @@ namespace Bizanc.io.Matching.Api
                         servicesCollection.AddSingleton<IChainRepository>(repository);
                     })
                 .UseStartup<Startup>()
+                .UseSerilog()
                 .Build()
                 .Run();
         }

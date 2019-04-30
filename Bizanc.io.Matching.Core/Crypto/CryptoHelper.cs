@@ -17,7 +17,6 @@ namespace Bizanc.io.Matching.Core.Crypto
             {
                 var pvt = Base58.Bitcoin.Encode(new Span<Byte>(key.Export(KeyBlobFormat.RawPrivateKey)));
                 var pbc = Base58.Bitcoin.Encode(new Span<Byte>(key.Export(KeyBlobFormat.RawPublicKey)));
-                Console.WriteLine(key.Size);
 
                 return (pvt, pbc);
             }

@@ -13,6 +13,7 @@ using SimpleBase;
 using Bizanc.io.Matching.Core.Domain.Immutable;
 using System.Collections.Concurrent;
 using Newtonsoft.Json;
+using Serilog;
 
 namespace Bizanc.io.Matching.Core.Domain
 {
@@ -285,7 +286,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private async Task<Block> Genesis()
         {
-            Console.WriteLine("Starting Genesis");
+            Log.Debug("Starting Genesis");
             var genesis = new Block();
 
             genesis.Header.Difficult = 21;
@@ -541,7 +542,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     Mining = true;
                 else
                 {
-                    Console.WriteLine("Already Mining...");
+                    Log.Warning("Already Mining...");
                     return null;
                 }
             }
@@ -598,25 +599,24 @@ namespace Bizanc.io.Matching.Core.Domain
                 block.Withdrawals = ellegibleWithdrawals;
 
                 block.Offers = ellegibleOffers;
-                Console.WriteLine("Mining New Block");
-                Console.WriteLine(ellegibleTransactions.Count + " transactions");
-                Console.WriteLine(ellegibleDeposits.Count + " deposits");
-                Console.WriteLine(ellegibleWithdrawals.Count + " withdrawals");
-                Console.WriteLine(ellegibleOffers.Count + " offers");
-
+                Log.Information("Mining New Block");
+                Log.Information(ellegibleTransactions.Count + " transactions");
+                Log.Information(ellegibleDeposits.Count + " deposits");
+                Log.Information(ellegibleWithdrawals.Count + " withdrawals");
+                Log.Information(ellegibleOffers.Count + " offers");
                 block.Header.MerkleRoot = root;
                 block.Header.TimeStamp = DateTime.Now;
                 var result = await Mine(block, CancelToken);
 
                 if (result != null)
                 {
-                    Console.WriteLine("Øting commit lock");
-                    Console.WriteLine("Got commit lock");
+                    Log.Debug("Getting commit lock");
                     try
                     {
                         await commitLocker.WaitAsync();
                         if (!CancelToken.IsCancellationRequested)
                         {
+                            Log.Debug("Got commit lock");
                             CancelToken.Cancel();
                             Mining = false;
                             Mined = true;
@@ -643,7 +643,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
             try
             {
-                Console.WriteLine("Mining Block, DIfculty: " + block.Header.Difficult);
+                Log.Information("Mining Block, Difculty: " + block.Header.Difficult);
 
                 BlockHeader header = block.Header;
                 var sw = new Stopwatch();
@@ -666,9 +666,9 @@ namespace Bizanc.io.Matching.Core.Domain
                 {
                     sw.Stop();
 
-                    Console.WriteLine("Found hash: " + Base58.Bitcoin.Encode(new Span<Byte>(hash)));
-                    Console.WriteLine("Nonce: " + header.Nonce);
-                    Console.WriteLine("Total Time: " + sw.Elapsed);
+                    Log.Information("Found hash: " + Base58.Bitcoin.Encode(new Span<Byte>(hash)));
+                    Log.Information("Nonce: " + header.Nonce);
+                    Log.Information("Total Time: " + sw.Elapsed);
 
                     block.Header.Hash = hash;
                     block.Header.Status = BlockStatus.Mined;
@@ -677,7 +677,7 @@ namespace Bizanc.io.Matching.Core.Domain
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Log.Error("Error during mining: "+e.ToString());
             }
             Mining = false;
             return null;
@@ -704,8 +704,8 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             if (block.TransactionsDictionary.Count > 0)
             {
-                Console.WriteLine("Validating transactions...");
-            slCount++;
+                Log.Debug("Validating transactions...");
+                slCount++;
                 var foundMineTransaction = false;
 
                 Transaction miningTransaction = null;
@@ -733,8 +733,8 @@ namespace Bizanc.io.Matching.Core.Domain
                         if (!await Pool.Contains(tx))
                         {
 
-                            Console.WriteLine("Block with invalid transaction.");
-                            Console.WriteLine(JsonConvert.SerializeObject(tx));
+                            Log.Error("Block with invalid transaction.");
+                            Log.Error(JsonConvert.SerializeObject(tx));
                             Pool.TransactionPool.VerifyTX(tx);
 
                             var bk = CurrentBlock;
@@ -742,7 +742,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
                             while (bk != null && !bk.Transactions.Any(t => t.HashStr == tx.HashStr))
                             {
-                                Console.WriteLine("NOT FOUND ON BLOCK " + bk.Header.Depth);
+                                Log.Error("NOT FOUND ON BLOCK " + bk.Header.Depth);
                                 prev = prev.Previous;
                                 if (prev != null)
                                     bk = prev.CurrentBlock;
@@ -751,9 +751,9 @@ namespace Bizanc.io.Matching.Core.Domain
                             }
 
                             if (bk == null)
-                                Console.WriteLine("Not found on chain");
+                                Log.Error("Not found on chain");
                             else
-                                Console.WriteLine("Found on chain");
+                                Log.Error("Found on chain");
                             return (false, null, null);
                         }
 
@@ -764,17 +764,17 @@ namespace Bizanc.io.Matching.Core.Domain
                         }
                         else
                         {
-                            Console.WriteLine("Block with Transaction without balance");
-                            Console.WriteLine("HasBalance " + transact.HasBalance(tx.Wallet, tx.Asset, tx.Outputs.Sum(o => o.Size)));
-                            Console.WriteLine("Wallet " + tx.Wallet);
-                            Console.WriteLine("Output " + tx.Outputs.Sum(o => o.Size));
+                            Log.Error("Block with Transaction without balance");
+                            Log.Error("HasBalance " + transact.HasBalance(tx.Wallet, tx.Asset, tx.Outputs.Sum(o => o.Size)));
+                            Log.Error("Wallet " + tx.Wallet);
+                            Log.Error("Output " + tx.Outputs.Sum(o => o.Size));
                             return (false, null, null);
                         }
                     }
                 }
             }
 
-            Console.WriteLine("Transactions validated");
+            Log.Debug("Transactions validated");
             return (true, transact, root);
         }
 
@@ -813,66 +813,66 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private async Task<Chain> ProcessBlock(Block block)
         {
-            Console.WriteLine("Starting process block");
+            Log.Debug("Starting process block");
             if (Previous == null && CurrentBlock == null && block.Header.PreviousBlockHash == null && block.TransactionsDictionary.Count == 0)
             {
-                Console.WriteLine("Creating genesis chain");
+                Log.Debug("Creating genesis chain");
                 CancelToken.Cancel();
                 Mining = false;
-                Console.WriteLine("Genesis chain pool created");
+                Log.Debug("Genesis chain pool created");
                 return new Chain(this, block, Pool);
             }
 
-            Console.WriteLine("Ceirifying dificulty");
+            Log.Debug("Certifying dificulty");
 
             var lastDeth = this.GetLastBlockDepth();
             if (CurrentBlock != null && (CurrentBlock.Header.Depth - 20) >= lastDeth && block.Header.Difficult != GetTargetDiff())
             {
-                Console.WriteLine("Invalid Block Difficulty");
+                Log.Error("Invalid Block Difficulty");
                 return null;
             }
 
-            Console.WriteLine("Verifying Depth");
+            Log.Debug("Verifying Depth");
 
             if (CurrentBlock != null && block.Header.Depth != CurrentBlock.Header.Depth + 1)
             {
-                Console.WriteLine("Invalid Block Depth");
-                Console.WriteLine("Current Block Depth " + CurrentBlock.Header.Depth);
-                Console.WriteLine("Current Block Hash " + CurrentBlock.HashStr);
-                Console.WriteLine("Received Block Depth " + block.Header.Depth);
-                Console.WriteLine("Received Block Previous Hash " + block.PreviousHashStr);
+                Log.Error("Invalid Block Depth");
+                Log.Error("Current Block Depth " + CurrentBlock.Header.Depth);
+                Log.Error("Current Block Hash " + CurrentBlock.HashStr);
+                Log.Error("Received Block Depth " + block.Header.Depth);
+                Log.Error("Received Block Previous Hash " + block.PreviousHashStr);
                 return null;
             }
 
-            Console.WriteLine("Verifying previous hash null");
+            Log.Debug("Verifying previous hash null");
             if (block.Header.PreviousBlockHash == null)
             {
-                Console.WriteLine("Received Empty previous block hash after genesis");
+                Log.Error("Received Empty previous block hash after genesis");
                 return null;
             }
 
-            Console.WriteLine("Verifying previous block hash match");
+            Log.Debug("Verifying previous block hash match");
             if (CurrentBlock != null && !block.Header.PreviousBlockHash.SequenceEqual(CurrentBlock.Header.Hash))
             {
-                Console.WriteLine("Invalid Previous Block Hash");
-                Console.WriteLine("PreviusBlockHash " + Base58.Bitcoin.Encode(new Span<Byte>(block.Header.PreviousBlockHash)));
-                Console.WriteLine("LastBlockHash " + Base58.Bitcoin.Encode(new Span<Byte>(CurrentBlock.Header.Hash)));
+                Log.Error("Invalid Previous Block Hash");
+                Log.Error("PreviusBlockHash " + Base58.Bitcoin.Encode(new Span<Byte>(block.Header.PreviousBlockHash)));
+                Log.Error("LastBlockHash " + Base58.Bitcoin.Encode(new Span<Byte>(CurrentBlock.Header.Hash)));
 
                 return null;
             }
 
             if (block.Timestamp < CurrentBlock.Timestamp || block.Timestamp > DateTime.Now.ToUniversalTime())
             {
-                Console.WriteLine("Block with invalid timestamp");
+                Log.Error("Block with invalid timestamp");
                 return null;
             }
 
-            Console.WriteLine("Block Header validated.");
+            Log.Debug("Block Header validated.");
 
             var transact = TransactManager;
             var result = false;
             byte[] root = new byte[0];
-            Console.WriteLine("Validatig deposits");
+            Log.Debug("Validatig deposits");
 
             var deposit = new Immutable.Deposit(DepositManager, transact);
             if (block.Deposits != null && block.DepositsDictionary.Count > 0)
@@ -884,7 +884,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
                     if (!await Pool.Contains(dp))
                     {
-                        Console.WriteLine("Block with invalid deposit");
+                        Log.Error("Block with invalid deposit");
                         return null;
                     }
 
@@ -894,9 +894,9 @@ namespace Bizanc.io.Matching.Core.Domain
             }
             transact = deposit.TransactManager;
 
-            Console.WriteLine("Deposits validated");
+            Log.Debug("Deposits validated");
 
-            Console.WriteLine("Validating book");
+            Log.Debug("Validating book");
             var book = new Book(BookManager, transact);
             var trades = new List<Trade>();
             if (block.OffersDictionary.Count > 0)
@@ -908,7 +908,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
                     if (!await Pool.Contains(of))
                     {
-                        Console.WriteLine("Block with invalid offer");
+                        Log.Error("Block with invalid offer");
                         return null;
                     }
 
@@ -919,7 +919,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
                     if (!result)
                     {
-                        Console.WriteLine("Block with invalid offer");
+                        Log.Error("Block with invalid offer");
                         return null;
                     }
 
@@ -927,7 +927,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     {
                         if (!clone.Trades.Any(c => c.Equals(t)))
                         {
-                            Console.WriteLine("Block with invalid trade");
+                            Log.Error("Block with invalid trade");
                             return null;
                         }
 
@@ -953,7 +953,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
                     if (!await Pool.Contains(of))
                     {
-                        Console.WriteLine("Block with invalid offer cancel");
+                        Log.Error("Block with invalid offer cancel");
                         return null;
                     }
 
@@ -963,7 +963,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
                     if (!result)
                     {
-                        Console.WriteLine("Block with invalid offer cancel");
+                        Log.Error("Block with invalid offer cancel");
                         return null;
                     }
 
@@ -971,13 +971,13 @@ namespace Bizanc.io.Matching.Core.Domain
                 }
             }
             transact = book.TransactManager;
-            Console.WriteLine("Book validated, validating transactions");
+            Log.Debug("Book validated, validating transactions");
             (result, transact, root) = await ValidateTransactions(root, block, transact);
 
             if (!result)
                 return null;
 
-            Console.WriteLine("Transactions validated, validating withdrawals");
+            Log.Debug("Transactions validated, validating withdrawals");
 
             var withdrawal = new Immutable.Withdrawal(WithdrawalManager, transact);
 
@@ -990,7 +990,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
                     if (!await Pool.Contains(wd) && !withdrawal.CanProcess(wd))
                     {
-                        Console.WriteLine("Block with invalid withdrawal.");
+                        Log.Error("Block with invalid withdrawal.");
                         return null;
                     }
 
@@ -1001,24 +1001,24 @@ namespace Bizanc.io.Matching.Core.Domain
 
             transact = withdrawal.TransactManager;
 
-            Console.WriteLine("withdrawals validated");
+            Log.Debug("withdrawals validated");
 
             if (!block.Header.MerkleRoot.SequenceEqual(root))
             {
-                Console.WriteLine("Block with invalid merkle root");
+                Log.Error("Block with invalid merkle root");
                 return null;
             }
 
-            Console.WriteLine("Merkle root validated, getting commit lock");
+            Log.Debug("Merkle root validated, getting commit lock");
 
             try
             {
                 await commitLocker.WaitAsync();
-                Console.WriteLine("commit lock gained");
+                Log.Debug("commit lock gained");
                 if (!CancelToken.IsCancellationRequested)
                 {
                     CancelToken.Cancel();
-                    Console.WriteLine("Block references last block, appending");
+                    Log.Debug("Block references last block, appending");
                     Mining = false;
                     transact.Balance.BlockHash = block.HashStr;
                     transact.Balance.Timestamp = block.Timestamp;
@@ -1064,7 +1064,7 @@ namespace Bizanc.io.Matching.Core.Domain
             {
                 var newChain = new Chain(Previous, TransactManager, DepositManager, WithdrawalManager, BookManager, CurrentBlock, LastBlock, pool);
                 await newChain.Initialize(minerWallet);
-                Console.WriteLine("Forking from Depth " + CurrentBlock.Header.Depth);
+                Log.Warning("Forking from Depth " + CurrentBlock.Header.Depth);
                 if (first)
                 {
                     newChain = await newChain.Append(block);
@@ -1088,13 +1088,13 @@ namespace Bizanc.io.Matching.Core.Domain
                 await fork.Pool.Add(CurrentBlock.Offers);
                 await fork.Pool.Add(tx);
                 await fork.Pool.Add(CurrentBlock.Withdrawals);
-                Console.WriteLine(tx.Count + " transactions added to fork");
-                Console.WriteLine("Depth " + CurrentBlock.Header.Depth);
-                Console.WriteLine("Block " + CurrentBlock.HashStr);
+                Log.Debug(tx.Count + " transactions added to fork");
+                Log.Debug("Depth " + CurrentBlock.Header.Depth);
+                Log.Debug("Block " + CurrentBlock.HashStr);
             }
             else
             {
-                Console.WriteLine("Returning empty fork");
+                Log.Warning("Returning empty fork");
                 fork = new Chain();
                 fork.Pool = pool;
                 await fork.Initialize(minerWallet);
@@ -1107,11 +1107,11 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             try
             {
-                Console.WriteLine("Starting process block");
+                Log.Debug("Starting process block");
                 var result = await ProcessBlock(block);
                 if (result == null)
                 {
-                    Console.WriteLine("Received Invalid block");
+                    Log.Error("Received Invalid block");
                     return null;
                 }
 
@@ -1120,8 +1120,8 @@ namespace Bizanc.io.Matching.Core.Domain
 
             catch (Exception e)
             {
-                Console.WriteLine("Error Appending Block");
-                Console.WriteLine(e.ToString());
+                Log.Error("Error Appending Block");
+                Log.Error(e.ToString());
             }
 
             return await Task.FromResult<Chain>(null);

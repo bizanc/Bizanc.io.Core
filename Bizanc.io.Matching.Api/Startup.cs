@@ -14,6 +14,8 @@ using Microsoft.OpenApi.Models;
 using Swashbuckle;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Serilog;
+using Serilog.AspNetCore;
 
 namespace Bizanc.io.Matching.Api
 {
@@ -46,6 +48,16 @@ namespace Bizanc.io.Matching.Api
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 c.IncludeXmlComments(xmlPath);
             });
+
+            Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .WriteTo.Console()
+            .WriteTo.File("log/bizancnode_log.txt",
+                rollingInterval: RollingInterval.Day,
+                rollOnFileSizeLimit: true)
+            .CreateLogger();
+            
+            services.AddLogging(l => l.AddSerilog(dispose: true, logger: Log.Logger));
         }
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
