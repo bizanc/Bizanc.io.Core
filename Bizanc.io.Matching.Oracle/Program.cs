@@ -78,8 +78,6 @@ namespace Bizanc.io.Matching.Oracle
                         }
                     }
                 }
-
-                await Task.Delay(1000);
             }
         }
 
