@@ -1124,24 +1124,28 @@ namespace Bizanc.io.Matching.Core.Domain
             if (of.Timestamp < chain.GetLastBlockTime() || of.Timestamp > DateTime.Now.ToUniversalTime())
                 return false;
 
-            of.BuildHash();
-            if (!await chain.Contains(of))
+            if (!CryptoHelper.IsValidBizancAddress(of.Wallet))
             {
-                if (!CryptoHelper.IsValidSignature(of.ToString(), of.Wallet, of.Signature))
-                {
-                    Log.Error("Offer with invalid signature");
-                    Log.Error(of.ToString());
-                    return false;
-                }
+                Log.Error("Received offer with invalid bizanc address");
+                Log.Error(of.ToString());
+                return false;
+            }
 
-                if (await chain.Append(of))
-                {
-                    foreach (var f in forks.Values)
-                        await f.Append(of);
+            if (!CryptoHelper.IsValidSignature(of.ToString(), of.Wallet, of.Signature))
+            {
+                Log.Error("Offer with invalid signature");
+                Log.Error(of.ToString());
+                return false;
+            }
 
-                    Notify(of);
-                    return true;
-                }
+            of.BuildHash();
+            if (!await chain.Contains(of) && await chain.Append(of))
+            {
+                foreach (var f in forks.Values)
+                    await f.Append(of);
+
+                Notify(of);
+                return true;
             }
 
             return false;
@@ -1151,6 +1155,13 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             if (of.Timestamp < chain.GetLastBlockTime() || of.Timestamp > DateTime.Now.ToUniversalTime())
                 return false;
+
+            if (!CryptoHelper.IsValidBizancAddress(of.Wallet))
+            {
+                Log.Error("Received offer cancel with invalid bizanc address");
+                Log.Error(of.ToString());
+                return false;
+            }
 
             of.BuildHash();
             if (!await chain.Contains(of))
@@ -1177,6 +1188,13 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private async Task AppendDeposit(Deposit deposit)
         {
+            if (!CryptoHelper.IsValidBizancAddress(deposit.TargetWallet))
+            {
+                Log.Error("Received deposit with invalid bizanc address");
+                Log.Error(deposit.ToString());
+                return;
+            }
+
             deposit.BuildHash();
             if (!await chain.Contains(deposit))
                 if (!await depositRepository.Contains(deposit.HashStr))
@@ -1271,31 +1289,35 @@ namespace Bizanc.io.Matching.Core.Domain
             if (tx.Timestamp < chain.GetLastBlockTime() || tx.Timestamp > DateTime.Now.ToUniversalTime())
                 return false;
 
+            if (!CryptoHelper.IsValidBizancAddress(tx.Wallet)
+                || tx.Outputs.Any(o => !CryptoHelper.IsValidBizancAddress(o.Wallet)))
+            {
+                Log.Error("Received deposit with invalid bizanc address");
+                Log.Error(tx.ToString());
+                return false;
+            }
+
+            if (tx.Outputs.Any(o => o.Size < 0))
+            {
+                Log.Error("Transaction with invalid output");
+                return false;
+            }
+
+            if (!CryptoHelper.IsValidSignature(tx.ToString(), tx.Wallet, tx.Signature))
+            {
+                Log.Error("Transaction with invalid signature");
+                Log.Error(tx.ToString());
+                return false;
+            }
 
             tx.BuildHash();
-            if (!await chain.Contains(tx))
+            if (!await chain.Contains(tx) && await chain.Append(tx))
             {
-                if (tx.Outputs.Any(o => o.Size < 0))
-                {
-                    Log.Error("Transaction with invalid output");
-                    return false;
-                }
+                foreach (var f in forks.Values)
+                    await f.Append(tx);
 
-                if (!CryptoHelper.IsValidSignature(tx.ToString(), tx.Wallet, tx.Signature))
-                {
-                    Log.Error("Transaction with invalid signature");
-                    Log.Error(tx.ToString());
-                    return false;
-                }
-
-                if (await chain.Append(tx))
-                {
-                    foreach (var f in forks.Values)
-                        await f.Append(tx);
-
-                    Notify(tx);
-                    return true;
-                }
+                Notify(tx);
+                return true;
             }
 
             return false;
@@ -1380,24 +1402,47 @@ namespace Bizanc.io.Matching.Core.Domain
             if (wd.Timestamp < chain.GetLastBlockTime() || wd.Timestamp > DateTime.Now.ToUniversalTime())
                 return false;
 
-            wd.BuildHash();
-            if (!await chain.Contains(wd))
+            if (!CryptoHelper.IsValidBizancAddress(wd.SourceWallet))
             {
-                if (!CryptoHelper.IsValidSignature(wd.ToString(), wd.SourceWallet, wd.Signature))
+                Log.Error("Received withdraw with invalid bizanc address");
+                Log.Error(wd.ToString());
+                return false;
+            }
+
+            if (wd.Asset == "BTC")
+            {
+                if (!CryptoHelper.IsValidBitcoinAddress(wd.TargetWallet))
                 {
-                    Log.Error("!!! Withdrawal with invalid signature !!!");
+                    Log.Error("!!! Withdrawal with invalid target wallet !!!");
                     Log.Error(wd.ToString());
                     return false;
                 }
-
-                if (await chain.Append(wd))
+            }
+            else
+            {
+                if (!CryptoHelper.IsValidEthereumAddress(wd.TargetWallet))
                 {
-                    foreach (var f in forks.Values)
-                        await f.Append(wd);
-
-                    Notify(wd);
-                    return true;
+                    Log.Error("!!! Withdrawal with invalid target wallet !!!");
+                    Log.Error(wd.ToString());
+                    return false;
                 }
+            }
+
+            if (!CryptoHelper.IsValidSignature(wd.ToString(), wd.SourceWallet, wd.Signature))
+            {
+                Log.Error("!!! Withdrawal with invalid signature !!!");
+                Log.Error(wd.ToString());
+                return false;
+            }
+
+            wd.BuildHash();
+            if (!await chain.Contains(wd) && await chain.Append(wd))
+            {
+                foreach (var f in forks.Values)
+                    await f.Append(wd);
+
+                Notify(wd);
+                return true;
             }
 
             return false;

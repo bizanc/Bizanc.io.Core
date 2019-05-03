@@ -12,6 +12,8 @@ namespace Bizanc.io.Matching.Test
         [Fact]
         public void Test()
         {
+            CryptoHelper.IsValidBizancAddress("2AsFp8AXdXqFdXz5R4uFMs39rreKpd2UDgnikxnDVJQtiF8UGh").Should().BeTrue();
+
             var pubKey = "BJ954IPZsIkawNGZw5CQjFBYPl4M/H96aqaqLjbvk70O5Jwk37OPy62VIdAEIsRecsVjWXBBYj/UALNE0ulgMUc=";
             var targetWallet = "TTTTTTTTTTTTTT";
             var size = 10;
