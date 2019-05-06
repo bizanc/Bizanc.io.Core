@@ -170,11 +170,13 @@ namespace Bizanc.io.Matching.Core.Domain
 
                         Log.Information("Wallet Generated");
                         Log.Information("Public " + wallet.PublicKey);
+                        Log.Information("Private " + wallet.PrivateKey);
                     }
                     else
                     {
                         Log.Information("Wallet Recoved");
                         Log.Information("Public " + wallet.PublicKey);
+                        Log.Information("Private " + wallet.PrivateKey);
                     }
                 }
                 else
