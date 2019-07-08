@@ -9,42 +9,42 @@ services:
       - 5001:5001
     volumes:
       - "biznode_datadir1:/app/RavenDB"
-  node2:
-    image: bizancio.core:latest
-    build: .
-    ports:
-      - 5557:5556
-      - 5002:5001
-    volumes:
-      - "biznode_datadir2:/app/RavenDB"
-  node3:
-    image: bizancio.core:latest
-    build: .
-    ports:
-      - 5558:5556
-      - 5003:5001
-    volumes:
-      - "biznode_datadir3:/app/RavenDB"
-  node4:
-    image: bizancio.core:latest
-    build: .
-    ports:
-      - 5559:5556
-      - 5004:5001
-    volumes:
-      - "biznode_datadir4:/app/RavenDB"
-  node5:
-    image: bizancio.core:latest
-    build: .
-    ports:
-      - 5560:5556
-      - 5005:5001
-    volumes:
-      - "biznode_datadir5:/app/RavenDB"
+  # node2:
+  #   image: bizancio.core:latest
+  #   build: .
+  #   ports:
+  #     - 5557:5556
+  #     - 5002:5001
+  #   volumes:
+  #     - "biznode_datadir2:/app/RavenDB"
+  # node3:
+  #   image: bizancio.core:latest
+  #   build: .
+  #   ports:
+  #     - 5558:5556
+  #     - 5003:5001
+  #   volumes:
+  #     - "biznode_datadir3:/app/RavenDB"
+  # node4:
+  #   image: bizancio.core:latest
+  #   build: .
+  #   ports:
+  #     - 5559:5556
+  #     - 5004:5001
+  #   volumes:
+  #     - "biznode_datadir4:/app/RavenDB"
+  # node5:
+  #   image: bizancio.core:latest
+  #   build: .
+  #   ports:
+  #     - 5560:5556
+  #     - 5005:5001
+  #   volumes:
+  #     - "biznode_datadir5:/app/RavenDB"
 volumes:
   biznode_datadir1: 
-  biznode_datadir2: 
-  biznode_datadir3: 
-  biznode_datadir4: 
-  biznode_datadir5: 
+  # biznode_datadir2: 
+  # biznode_datadir3: 
+  # biznode_datadir4: 
+  # biznode_datadir5: 
     
