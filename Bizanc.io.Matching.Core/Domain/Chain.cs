@@ -316,6 +316,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
             mined.BuildHash();
             mined.Finish();
+            genesis.Transactions = new List<Transaction>{ mined }
             genesis.BuildMerkleRoot();
             CancelToken = new CancellationTokenSource();
             return await Mine(genesis, CancelToken);
