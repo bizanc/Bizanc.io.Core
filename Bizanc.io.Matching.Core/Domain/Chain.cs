@@ -70,6 +70,14 @@ namespace Bizanc.io.Matching.Core.Domain
             this.LastBlock = genesis;
             this.Pool = pool;
         }
+        public Chain(Chain previous, Block genesis, Pool pool, TransactionManager transact)
+            : this(previous)
+        {
+            this.CurrentBlock = genesis;
+            this.LastBlock = genesis;
+            this.Pool = pool;
+            this.TransactManager = transact;
+        }
 
         public Chain(Chain previous,
                 TransactionManager transact,
@@ -292,6 +300,22 @@ namespace Bizanc.io.Matching.Core.Domain
             genesis.Header.Difficult = 21;
 
             genesis.Header.TimeStamp = DateTime.Now;
+            var ellegibles = new List<Transaction>();
+
+            var mined = new Transaction()
+            {
+                Timestamp = DateTime.Now,
+                Asset = "BIZ",
+                Outputs = new List<TransactionOutput>(){
+                                new TransactionOutput{
+                                    Wallet = "VMBxDa9XQbsAW67k7avuo7HcXKxz4nizetAPi4FB5Upcj3eCD",
+                                    Size = 28987200
+                                }
+                            }
+            };
+
+            mined.BuildHash();
+            mined.Finish();
             genesis.BuildMerkleRoot();
             CancelToken = new CancellationTokenSource();
             return await Mine(genesis, CancelToken);
@@ -556,8 +580,9 @@ namespace Bizanc.io.Matching.Core.Domain
             if (CurrentBlock == null)
             {
                 var genesis = await Genesis();
+                var tx = TransactManager.ProcessTransaction(genesis.Transactions.First());
                 if (genesis != null)
-                    return new Chain(this, genesis, Pool);
+                    return new Chain(this, genesis, Pool, tx);
             }
             else
             {
@@ -677,7 +702,7 @@ namespace Bizanc.io.Matching.Core.Domain
             }
             catch (Exception e)
             {
-                Log.Error("Error during mining: "+e.ToString());
+                Log.Error("Error during mining: " + e.ToString());
             }
             Mining = false;
             return null;
@@ -820,7 +845,17 @@ namespace Bizanc.io.Matching.Core.Domain
                 CancelToken.Cancel();
                 Mining = false;
                 Log.Debug("Genesis chain pool created");
-                return new Chain(this, block, Pool);
+
+                if (block.Transactions.Count() != 1 ||
+                    block.Transactions.First().Outputs[0].Wallet != "VMBxDa9XQbsAW67k7avuo7HcXKxz4nizetAPi4FB5Upcj3eCD" ||
+                    block.Transactions.First().Outputs[0].Wallet != "28987200")
+                {
+                    Log.Error("Genesis block with invalid transaction");
+                    return null;
+                }
+
+                var tx = TransactManager.ProcessTransaction(block.Transactions.First());
+                return new Chain(this, block, Pool, tx);
             }
 
             Log.Debug("Certifying dificulty");
