@@ -581,9 +581,11 @@ namespace Bizanc.io.Matching.Core.Domain
             if (CurrentBlock == null)
             {
                 var genesis = await Genesis();
-                var tx = TransactManager.ProcessTransaction(genesis.Transactions.First());
                 if (genesis != null)
+                {
+                    var tx = TransactManager.ProcessTransaction(genesis.Transactions.First());
                     return new Chain(this, genesis, Pool, tx);
+                }
             }
             else
             {
@@ -840,7 +842,7 @@ namespace Bizanc.io.Matching.Core.Domain
         private async Task<Chain> ProcessBlock(Block block)
         {
             Log.Debug("Starting process block");
-            if (Previous == null && CurrentBlock == null && block.Header.PreviousBlockHash == null && block.TransactionsDictionary.Count == 0)
+            if (Previous == null && CurrentBlock == null && block.Header.PreviousBlockHash == null)
             {
                 Log.Debug("Creating genesis chain");
                 CancelToken.Cancel();
@@ -849,7 +851,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
                 if (block.Transactions.Count() != 1 ||
                     block.Transactions.First().Outputs[0].Wallet != "VMBxDa9XQbsAW67k7avuo7HcXKxz4nizetAPi4FB5Upcj3eCD" ||
-                    block.Transactions.First().Outputs[0].Wallet != "28987200")
+                    block.Transactions.First().Outputs[0].Size != 28987200)
                 {
                     Log.Error("Genesis block with invalid transaction");
                     return null;
