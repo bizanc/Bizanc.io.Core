@@ -35,7 +35,7 @@ namespace Bizanc.io.Matching.Infra.Repository
                 await s.StoreAsync(info);
                 await s.SaveChangesAsync();
 
-                s.Advanced.WaitForIndexesAfterSaveChanges();
+                s.Advanced.WaitForIndexesAfterSaveChanges(new TimeSpan(1, 0, 0));
             }
         }
 
