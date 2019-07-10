@@ -43,6 +43,11 @@ namespace Bizanc.io.Matching.Infra.Connector
         public async Task<(List<Deposit>, List<WithdrawInfo>)> Start(string blockNumberDeposits, string blockNumberWithdraws)
         {
             cancel = new CancellationToken();
+            return await LoadOps(blockNumberDeposits);
+        }
+
+        private async Task<(List<Deposit>, List<WithdrawInfo>)> LoadOps(string blockNumberDeposits)
+        {
             await client.WaitServerStartedAsync();
             session = await client.CreateWebsocketNotificationSessionAsync();
             session.ListenTrackedSources(new[] { oracleAddress });
@@ -67,10 +72,23 @@ namespace Bizanc.io.Matching.Infra.Connector
         {
             while (!cancel.IsCancellationRequested)
             {
-                var evt = (NewTransactionEvent)(await session.NextEventAsync(cancel));
+                try
+                {
+                    var evt = (NewTransactionEvent)(await session.NextEventAsync(cancel));
 
-                if (evt.TransactionData.Confirmations > 0)
-                    WaitConfirmations(evt.TransactionData.TransactionHash);
+                    if (evt.TransactionData.Confirmations > 0)
+                        WaitConfirmations(evt.TransactionData.TransactionHash);
+                }
+                catch (Exception e)
+                {
+                    Log.Error("Failed to retrieve from websocket: \n" + e.ToString());
+                    break;
+                }
+            }
+
+            if (!cancel.IsCancellationRequested)
+            {
+                await LoadOps(this.lastBlockDeposits.ToString());
             }
         }
 
