@@ -808,10 +808,16 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private async void ReconnectTask(Task task, IPeer peer, int count = 0)
         {
+            if(peerDictionary.Values.Any(p => p.Equal(peer.Address)))
+                return;
+
             var newPeer = await peerListener.Connect(peer.Address);
 
-            while (newPeer == null && count < 50)
+            while (newPeer == null && count < 100)
             {
+                if (peerDictionary.Values.Any(p => p.Equal(peer.Address)))
+                    return;
+
                 count++;
                 await Task.Delay(5000 * count).ContinueWith(async t => { newPeer = await peerListener.Connect(peer.Address); });
             }
@@ -887,7 +893,7 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             foreach (var ad in listResponse.Peers)
             {
-                if (!peerDictionary.Values.Any(p => p.Address == ad))
+                if (!peerDictionary.Values.Any(p => p.Equal(ad)))
                 {
                     Log.Information("connecting to peer from peerlist response: " + ad);
                     var peer = await peerListener.Connect(ad);
