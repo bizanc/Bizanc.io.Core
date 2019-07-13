@@ -42,21 +42,22 @@ namespace Bizanc.io.Matching.Infra
         {
             try
             {
-                return await Task<Peer>.Run(() =>
-                {
-                    Log.Debug("Connectig to: " + address);
+                Log.Debug("Connectig to: " + address);
 
-                    var values = address.Split(':');
-                    var port = values[values.Length - 1];
-                    var ip = address.Substring(0, address.Length - port.Length + 1);
+                var values = address.Split(':');
+                var port = values[values.Length - 1];
+                var ip = address.Substring(0, address.Length - port.Length - 1);
 
-                    return new Peer(new TcpClient(values[0], int.Parse(port)));
-                });
+                var ipad = IPAddress.Parse(ip).MapToIPv4();
+                var client = new TcpClient();
+                await client.ConnectAsync(ipad, int.Parse(port));
+
+                return new Peer(client);
             }
             catch (Exception e)
             {
-                Log.Error("Failed to connect peer");
-                Log.Error(e.ToString());
+                Log.Error("Failed to connect peer: " + address);
+                Log.Debug(e.ToString());
             }
 
             return null;

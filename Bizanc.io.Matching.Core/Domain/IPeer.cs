@@ -20,5 +20,7 @@ namespace Bizanc.io.Matching.Core.Domain
         Task Disconnect();
 
         void StartHeartBeat();
+
+        bool Equal(string address);
     }
 }

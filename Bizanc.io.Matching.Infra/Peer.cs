@@ -97,13 +97,13 @@ namespace Bizanc.io.Matching.Infra
 
         private async Task SendTask()
         {
-            while(await sendStream.Reader.WaitToReadAsync())
+            while (await sendStream.Reader.WaitToReadAsync())
             {
                 var data = await sendStream.Reader.ReadAsync();
                 var msg = Newtonsoft.Json.JsonConvert.SerializeObject(data);
 
-                if(data.MessageType ==  MessageType.Block)
-                    Log.Debug("Block size: "+Encoding.UTF8.GetByteCount(msg));
+                if (data.MessageType == MessageType.Block)
+                    Log.Debug("Block size: " + Encoding.UTF8.GetByteCount(msg));
 
                 await streamWriter.WriteLineAsync(msg);
                 await streamWriter.FlushAsync();
@@ -113,7 +113,7 @@ namespace Bizanc.io.Matching.Infra
 
         public async void SendMessage<T>(T message) where T : BaseMessage
         {
-        await sendStream.Writer.WriteAsync(message);
+            await sendStream.Writer.WriteAsync(message);
         }
 
         public async Task<string> Receive()
@@ -146,6 +146,18 @@ namespace Bizanc.io.Matching.Infra
         public void StartHeartBeat()
         {
             Task.Delay(1000).ContinueWith(t => HeartBeatTask(t));
+        }
+
+        public bool Equal(string address)
+        {
+            var values = address.Split(':');
+            var port = values[values.Length - 1];
+            var ip = address.Substring(0, address.Length - port.Length - 1);
+
+            var ipad = IPAddress.Parse(ip).MapToIPv4();
+
+            var endpoint = (IPEndPoint)client.Client.RemoteEndPoint;
+            return endpoint.Address.MapToIPv4().Equals(ipad);
         }
     }
 }
