@@ -883,11 +883,20 @@ namespace Bizanc.io.Matching.Core.Domain
             sender.SendMessage(new PeerListResponse() { Peers = list });
         }
 
-        public void Message(IPeer sender, PeerListResponse listResponse)
+        public async void Message(IPeer sender, PeerListResponse listResponse)
         {
             foreach (var ad in listResponse.Peers)
-                peerListener.Connect(ad);
+            {
+                if (!peerDictionary.Values.Any(p => p.Address == ad))
+                {
+                    Log.Information("connecting to peer from peerlist response: " + ad);
+                    var peer = await peerListener.Connect(ad);
+                    if(peer != null)
+                        Connect(peer);
+                }
+            }
 
+            Log.Information("Finished trying new peers from: " + sender.Address);
         }
 
         public async void Message(IPeer sender, TransactionPoolRequest txPool)

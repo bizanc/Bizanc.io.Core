@@ -48,15 +48,15 @@ namespace Bizanc.io.Matching.Infra
 
                     var values = address.Split(':');
                     var port = values[values.Length - 1];
-                    var ip = address.Substring(0, address.Length - port.Length + 1);
+                    var ip = address.Substring(0, address.Length - port.Length - 1);
 
-                    return new Peer(new TcpClient(values[0], int.Parse(port)));
+                    return new Peer(new TcpClient(ip, int.Parse(port)));
                 });
             }
             catch (Exception e)
             {
-                Log.Error("Failed to connect peer");
-                Log.Error(e.ToString());
+                Log.Error("Failed to connect peer: " + address);
+                Log.Debug(e.ToString());
             }
 
             return null;

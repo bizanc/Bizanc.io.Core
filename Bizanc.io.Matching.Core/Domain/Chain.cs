@@ -672,6 +672,7 @@ namespace Bizanc.io.Matching.Core.Domain
             try
             {
                 Log.Information("Mining Block, Difculty: " + block.Header.Difficult);
+                Log.Information("Mining Block, Difculty: " + block.Header.Difficult);
 
                 BlockHeader header = block.Header;
                 var sw = new Stopwatch();
