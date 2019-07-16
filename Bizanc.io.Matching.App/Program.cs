@@ -27,6 +27,7 @@ namespace Bizanc.io.Matching.App
         public string BTCEndpoint { get; set; }
         public string ETHEndpoint { get; set; }
         public bool Mine { get; set; }
+        public int Threads { get; set; }
         public string ApiEndpoint { get; set; }
         public string MinerAddress { get; set; }
     }
@@ -56,7 +57,7 @@ namespace Bizanc.io.Matching.App
             new BlockRepository(), new BalanceRepository(), new BookRepository(),
             new DepositRepository(), new OfferRepository(), new TransactionRepository(),
             new WithdrawalRepository(), new TradeRepository(), new WithdrawInfoRepository(),
-            new CryptoConnector(conf.OracleETHAddres, conf.OracleBTCAddres, conf.ETHEndpoint, conf.BTCEndpoint));
+            new CryptoConnector(conf.OracleETHAddres, conf.OracleBTCAddres, conf.ETHEndpoint, conf.BTCEndpoint), conf.Threads);
 
             await miner.Start(!conf.Mine, conf.MinerAddress);
 

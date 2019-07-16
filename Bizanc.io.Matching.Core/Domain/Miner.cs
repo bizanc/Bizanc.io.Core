@@ -81,6 +81,8 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private ReadWriteLockAsync persistLock = new ReadWriteLockAsync(1);
 
+        private int threads;
+
         public Miner(IPeerListener peerListener, IWalletRepository walletRepository,
                         IBlockRepository blockRepository,
                         IBalanceRepository balanceRepository,
@@ -91,7 +93,8 @@ namespace Bizanc.io.Matching.Core.Domain
                         IWithdrawalRepository withdrawalRepository,
                         ITradeRepository tradeRepository,
                         IWithdrawInfoRepository withdrawInfoRepository,
-                        IConnector connector)
+                        IConnector connector,
+                        int threads = 1)
         {
             this.peerListener = peerListener;
             this.walletRepository = walletRepository;
@@ -105,7 +108,7 @@ namespace Bizanc.io.Matching.Core.Domain
             this.tradeRepository = tradeRepository;
             this.withdrawInfoRepository = withdrawInfoRepository;
             this.connector = connector;
-
+            this.threads = threads;
             Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.Console()
@@ -132,7 +135,7 @@ namespace Bizanc.io.Matching.Core.Domain
             var books = await bookRepository.Get();
 
             if (persistPoints == null || persistPoints.Count == 0)
-                chain = new Chain();
+                chain = new Chain(threads);
             else
             {
                 foreach (var persistInfo in persistPoints)
@@ -148,7 +151,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     book = new Immutable.Book(book, transact);
                     var deposit = new Immutable.Deposit(null, transact);
                     var withdrawal = new Immutable.Withdrawal(null, transact);
-                    chain = new Chain(chain, transact, deposit, withdrawal, book, block, lastBLock, new Immutable.Pool());
+                    chain = new Chain(chain, transact, deposit, withdrawal, book, block, lastBLock, new Immutable.Pool(), threads);
                     chain.Persisted = true;
                 }
             }
