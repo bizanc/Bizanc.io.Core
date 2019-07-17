@@ -677,27 +677,29 @@ namespace Bizanc.io.Matching.Core.Domain
                 sw.Start();
 
                 var i = 0;
-                var batch = 50000;
+                var batch = 1000000;
                 var foundHash = false;
                 while (!cancel.IsCancellationRequested && !foundHash)
                 {
                     var tasks = new Task[threads];
                     SemaphoreSlim locker = new SemaphoreSlim(1, 1);
+                    var start = i * threads * batch;
                     for (int j = 0; j < threads; j++)
                     {
-                        var start = i * batch;
-
-                        tasks[j] = Task.Run(async delegate
+                        var tStart = start + (batch * j);
+                        tasks[j] = Task.Factory.StartNew(async delegate
                         {
-                            foreach (var dp in Enumerable.Range(start + (batch * j), batch))
+                            Log.Information("Starting mining batch: " + tStart);
+
+                            for (int g = tStart; g < tStart + batch; g++)
                             {
                                 if (cancel.IsCancellationRequested)
-                                    break;
+                                    return;
 
                                 if (foundHash)
-                                    break;
+                                    return;
 
-                                var hash = CryptoHelper.Hash(header.ToString(dp));
+                                var hash = CryptoHelper.Hash(header.ToString(g));
 
                                 if (CryptoHelper.IsValidHash(header.Difficult, hash))
                                 {
@@ -707,9 +709,9 @@ namespace Bizanc.io.Matching.Core.Domain
                                         if (!foundHash)
                                         {
                                             foundHash = true;
-                                            header.Nonce = dp;
+                                            header.Nonce = g;
                                             header.Hash = hash;
-                                            break;
+                                            return;
                                         }
                                     }
                                     finally
@@ -719,7 +721,8 @@ namespace Bizanc.io.Matching.Core.Domain
                                 }
 
                             }
-                        });
+
+                        }, TaskCreationOptions.LongRunning);
                     }
 
                     await Task.WhenAll(tasks);
@@ -727,7 +730,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     i++;
                 }
 
-                if (!cancel.IsCancellationRequested)
+                if (!cancel.IsCancellationRequested && foundHash)
                 {
                     sw.Stop();
 
