@@ -30,12 +30,16 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public override string ToString()
         {
-            
+            return ToString(Depth);
+        }
+
+        public string ToString(long depth)
+        {
             return (PreviousBlockHash != null ? Base58.Bitcoin.Encode(new Span<Byte>(PreviousBlockHash)) : "")
                 + Difficult.ToString()
                 + (MerkleRoot != null ? Base58.Bitcoin.Encode(new Span<Byte>(MerkleRoot)) : "")
                 + TimeStampTicks
-                + Depth
+                + depth
                 + Nonce;
         }
     }

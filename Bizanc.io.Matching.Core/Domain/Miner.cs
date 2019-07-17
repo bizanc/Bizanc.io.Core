@@ -81,6 +81,12 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private ReadWriteLockAsync persistLock = new ReadWriteLockAsync(1);
 
+        private int threads;
+
+        private bool synching = false;
+
+        private TaskCompletionSource<object> synchSource = new TaskCompletionSource<object>();
+
         public Miner(IPeerListener peerListener, IWalletRepository walletRepository,
                         IBlockRepository blockRepository,
                         IBalanceRepository balanceRepository,
@@ -91,7 +97,8 @@ namespace Bizanc.io.Matching.Core.Domain
                         IWithdrawalRepository withdrawalRepository,
                         ITradeRepository tradeRepository,
                         IWithdrawInfoRepository withdrawInfoRepository,
-                        IConnector connector)
+                        IConnector connector,
+                        int threads = 1)
         {
             this.peerListener = peerListener;
             this.walletRepository = walletRepository;
@@ -105,7 +112,7 @@ namespace Bizanc.io.Matching.Core.Domain
             this.tradeRepository = tradeRepository;
             this.withdrawInfoRepository = withdrawInfoRepository;
             this.connector = connector;
-
+            this.threads = threads;
             Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.Console()
@@ -132,7 +139,7 @@ namespace Bizanc.io.Matching.Core.Domain
             var books = await bookRepository.Get();
 
             if (persistPoints == null || persistPoints.Count == 0)
-                chain = new Chain();
+                chain = new Chain(threads);
             else
             {
                 foreach (var persistInfo in persistPoints)
@@ -148,16 +155,13 @@ namespace Bizanc.io.Matching.Core.Domain
                     book = new Immutable.Book(book, transact);
                     var deposit = new Immutable.Deposit(null, transact);
                     var withdrawal = new Immutable.Withdrawal(null, transact);
-                    chain = new Chain(chain, transact, deposit, withdrawal, book, block, lastBLock, new Immutable.Pool());
+                    chain = new Chain(chain, transact, deposit, withdrawal, book, block, lastBLock, new Immutable.Pool(), threads);
                     chain.Persisted = true;
                 }
             }
 
             if (!isOracle)
             {
-                await peerListener.Start();
-                ProcessAccept("");
-
                 if (string.IsNullOrEmpty(minerAddress))
                 {
                     wallet = await walletRepository.Get();
@@ -210,6 +214,20 @@ namespace Bizanc.io.Matching.Core.Domain
                 ProcessMining();
         }
 
+        public async Task StartListener()
+        {
+            if(synching)
+                await synchSource.Task;
+
+            await peerListener.Start();
+            ProcessAccept("");
+        }
+
+        public void StartSynch()
+        {
+            synching = true;
+        }
+
         private async void ProcessDeposits()
         {
             var reader = connector.GetDepositsReader();
@@ -259,12 +277,25 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             try
             {
+                if (synching)
+                    await synchSource.Task;
+
                 var peer = await peerListener.Accept();
 
                 while (peer != null)
                 {
-                    Connect(peer);
-                    peer = await peerListener.Accept();
+                    try
+                    {
+                        if (synching)
+                            await synchSource.Task;
+
+                        Connect(peer);
+                        peer = await peerListener.Accept();
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Error(e.ToString());
+                    }
                 }
             }
             catch (Exception e)
@@ -438,7 +469,7 @@ namespace Bizanc.io.Matching.Core.Domain
         private async void ProcessMining()
         {
             Log.Debug("ProcessMining");
-            if (isOracle)
+            if (isOracle || synching)
                 return;
 
             Chain preChain = null;
@@ -808,7 +839,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private async void ReconnectTask(Task task, IPeer peer, int count = 0)
         {
-            if(peerDictionary.Values.Any(p => p.Equal(peer.Address)))
+            if (peerDictionary.Values.Any(p => p.Equal(peer.Address)))
                 return;
 
             var newPeer = await peerListener.Connect(peer.Address);
@@ -891,13 +922,15 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async void Message(IPeer sender, PeerListResponse listResponse)
         {
+            await synchSource.Task;
+
             foreach (var ad in listResponse.Peers)
             {
                 if (!peerDictionary.Values.Any(p => p.Equal(ad)))
                 {
                     Log.Information("connecting to peer from peerlist response: " + ad);
                     var peer = await peerListener.Connect(ad);
-                    if(peer != null)
+                    if (peer != null)
                         Connect(peer);
                 }
             }
@@ -954,6 +987,12 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async Task Message(IPeer sender, BlockResponse blockResponse)
         {
+            if (synching && !synchSource.Task.IsCompleted && blockResponse.End)
+            {
+                synching = false;
+                synchSource.SetResult(null);
+            }
+
             Log.Debug("Received block message");
             foreach (var block in blockResponse.Blocks)
             {

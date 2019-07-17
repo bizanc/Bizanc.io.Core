@@ -41,12 +41,15 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public bool Persisted { get; set; } = false;
 
-        public Chain()
-        {
+        private int threads;
 
+        public Chain(int threads)
+        {
+            this.threads = threads;
         }
 
-        public Chain(Chain previous)
+        public Chain(Chain previous, int threads)
+            : this(threads)
         {
             if (previous != null)
             {
@@ -63,15 +66,8 @@ namespace Bizanc.io.Matching.Core.Domain
             }
         }
 
-        public Chain(Chain previous, Block genesis, Pool pool)
-            : this(previous)
-        {
-            this.CurrentBlock = genesis;
-            this.LastBlock = genesis;
-            this.Pool = pool;
-        }
-        public Chain(Chain previous, Block genesis, Pool pool, TransactionManager transact)
-            : this(previous)
+        public Chain(Chain previous, Block genesis, Pool pool, TransactionManager transact, int threads)
+            : this(previous, threads)
         {
             this.CurrentBlock = genesis;
             this.LastBlock = genesis;
@@ -86,8 +82,9 @@ namespace Bizanc.io.Matching.Core.Domain
                 Immutable.Book book,
                 Block currentBlock,
                 Block lastBlock,
-                Pool pool)
-                : this(previous)
+                Pool pool,
+                int threads)
+                : this(previous, threads)
         {
             this.BookManager = book;
             this.CurrentBlock = currentBlock;
@@ -96,6 +93,7 @@ namespace Bizanc.io.Matching.Core.Domain
             this.TransactManager = transact;
             this.WithdrawalManager = withdrawal;
             this.Pool = pool;
+            this.threads = threads;
         }
 
         public async Task<ICollection<Transaction>> GetTransactionPool() => await Pool.TransactionPool.GetPool();
@@ -584,7 +582,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 if (genesis != null)
                 {
                     var tx = TransactManager.ProcessTransaction(genesis.Transactions.First());
-                    return new Chain(this, genesis, Pool, tx);
+                    return new Chain(this, genesis, Pool, tx, threads);
                 }
             }
             else
@@ -652,7 +650,7 @@ namespace Bizanc.io.Matching.Core.Domain
                             transact.Balance.Timestamp = result.Timestamp;
                             book.BlockHash = result.HashStr;
                             book.Timestamp = result.Timestamp;
-                            return new Chain(this, transact, deposit, withdrawal, book, result, CurrentBlock, Pool);
+                            return new Chain(this, transact, deposit, withdrawal, book, result, CurrentBlock, Pool, threads);
                         }
                     }
                     finally
@@ -678,28 +676,58 @@ namespace Bizanc.io.Matching.Core.Domain
                 var sw = new Stopwatch();
                 sw.Start();
 
-                var hash = CryptoHelper.Hash(header.ToString());
-
-                await Task.Run(delegate
+                var i = 0;
+                var batch = 10000000;
+                var foundHash = false;
+                while (!cancel.IsCancellationRequested && !foundHash)
                 {
-                    while (!CryptoHelper.IsValidHash(header.Difficult, hash) && !cancel.IsCancellationRequested)
+                    var tasks = new Task[threads];
+                    var start = i * threads * batch;
+                    for (int j = 0; j < threads; j++)
                     {
-                        header.Nonce++;
-                        hash = CryptoHelper.Hash(header.ToString());
+                        var tStart = start + (batch * j);
+                        tasks[j] = Task.Factory.StartNew(delegate
+                        {
+                            Log.Information("Starting mining batch: " + tStart);
+
+                            for (int g = tStart; g < tStart + batch; g++)
+                            {
+                                if (cancel.IsCancellationRequested)
+                                    return;
+
+                                if (foundHash)
+                                    return;
+
+                                var hash = CryptoHelper.Hash(header.ToString(g));
+
+                                if (CryptoHelper.IsValidHash(header.Difficult, hash))
+                                {
+                                    if (!foundHash)
+                                    {
+                                        foundHash = true;
+                                        header.Nonce = g;
+                                        header.Hash = hash;
+                                        return;
+                                    }
+                                }
+                            }
+
+                        }, TaskCreationOptions.LongRunning);
                     }
-                });
 
+                    await Task.WhenAll(tasks);
 
+                    i++;
+                }
 
-                if (!cancel.IsCancellationRequested)
+                if (!cancel.IsCancellationRequested && foundHash)
                 {
                     sw.Stop();
 
-                    Log.Information("Found hash: " + Base58.Bitcoin.Encode(new Span<Byte>(hash)));
+                    Log.Information("Found hash: " + Base58.Bitcoin.Encode(new Span<Byte>(header.Hash)));
                     Log.Information("Nonce: " + header.Nonce);
                     Log.Information("Total Time: " + sw.Elapsed);
 
-                    block.Header.Hash = hash;
                     block.Header.Status = BlockStatus.Mined;
                     return block;
                 }
@@ -859,7 +887,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 }
 
                 var tx = TransactManager.ProcessTransaction(block.Transactions.First());
-                return new Chain(this, block, Pool, tx);
+                return new Chain(this, block, Pool, tx, threads);
             }
 
             Log.Debug("Certifying dificulty");
@@ -1063,7 +1091,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     transact.Balance.Timestamp = block.Timestamp;
                     book.BlockHash = block.HashStr;
                     book.Timestamp = block.Timestamp;
-                    return new Chain(this, transact, deposit, withdrawal, book, block, CurrentBlock, Pool);
+                    return new Chain(this, transact, deposit, withdrawal, book, block, CurrentBlock, Pool, threads);
                 }
             }
             finally
@@ -1080,7 +1108,9 @@ namespace Bizanc.io.Matching.Core.Domain
             if (count == 20)
                 return false;
 
-            if (block.Header.PreviousBlockHash == null && block.TransactionsDictionary.Count == 0)
+            if (block.Header.PreviousBlockHash == null && block.Transactions.Count() == 1 &&
+                    block.Transactions.First().Outputs[0].Wallet == "VMBxDa9XQbsAW67k7avuo7HcXKxz4nizetAPi4FB5Upcj3eCD" &&
+                    block.Transactions.First().Outputs[0].Size == 28987200)
                 return true;
 
             if (CurrentBlock != null && CurrentBlock.Header.Hash.SequenceEqual(block.Header.PreviousBlockHash))
@@ -1101,7 +1131,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     block.Header.PreviousBlockHash != null &&
                     CurrentBlock.Header.Hash.SequenceEqual(block.Header.PreviousBlockHash))
             {
-                var newChain = new Chain(Previous, TransactManager, DepositManager, WithdrawalManager, BookManager, CurrentBlock, LastBlock, pool);
+                var newChain = new Chain(Previous, TransactManager, DepositManager, WithdrawalManager, BookManager, CurrentBlock, LastBlock, pool, threads);
                 await newChain.Initialize(minerWallet);
                 Log.Warning("Forking from Depth " + CurrentBlock.Header.Depth);
                 if (first)
@@ -1134,7 +1164,7 @@ namespace Bizanc.io.Matching.Core.Domain
             else
             {
                 Log.Warning("Returning empty fork");
-                fork = new Chain();
+                fork = new Chain(threads);
                 fork.Pool = pool;
                 await fork.Initialize(minerWallet);
             }
