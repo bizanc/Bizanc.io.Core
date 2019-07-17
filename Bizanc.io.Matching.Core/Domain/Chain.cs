@@ -682,12 +682,11 @@ namespace Bizanc.io.Matching.Core.Domain
                 while (!cancel.IsCancellationRequested && !foundHash)
                 {
                     var tasks = new Task[threads];
-                    SemaphoreSlim locker = new SemaphoreSlim(1, 1);
                     var start = i * threads * batch;
                     for (int j = 0; j < threads; j++)
                     {
                         var tStart = start + (batch * j);
-                        tasks[j] = Task.Factory.StartNew(async delegate
+                        tasks[j] = Task.Factory.StartNew(delegate
                         {
                             Log.Information("Starting mining batch: " + tStart);
 
@@ -703,23 +702,14 @@ namespace Bizanc.io.Matching.Core.Domain
 
                                 if (CryptoHelper.IsValidHash(header.Difficult, hash))
                                 {
-                                    try
+                                    if (!foundHash)
                                     {
-                                        await locker.WaitAsync();
-                                        if (!foundHash)
-                                        {
-                                            foundHash = true;
-                                            header.Nonce = g;
-                                            header.Hash = hash;
-                                            return;
-                                        }
-                                    }
-                                    finally
-                                    {
-                                        locker.Release();
+                                        foundHash = true;
+                                        header.Nonce = g;
+                                        header.Hash = hash;
+                                        return;
                                     }
                                 }
-
                             }
 
                         }, TaskCreationOptions.LongRunning);
