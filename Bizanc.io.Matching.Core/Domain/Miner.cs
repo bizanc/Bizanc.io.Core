@@ -911,6 +911,8 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async void Message(IPeer sender, PeerListResponse listResponse)
         {
+            await sender.InitSource.Task;
+            
             foreach (var ad in listResponse.Peers)
             {
                 if (!peerDictionary.Values.Any(p => p.Equal(ad)))
