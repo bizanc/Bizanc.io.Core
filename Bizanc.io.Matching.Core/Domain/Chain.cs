@@ -1108,7 +1108,9 @@ namespace Bizanc.io.Matching.Core.Domain
             if (count == 20)
                 return false;
 
-            if (block.Header.PreviousBlockHash == null && block.TransactionsDictionary.Count == 0)
+            if (block.Header.PreviousBlockHash == null && block.Transactions.Count() == 1 &&
+                    block.Transactions.First().Outputs[0].Wallet == "VMBxDa9XQbsAW67k7avuo7HcXKxz4nizetAPi4FB5Upcj3eCD" &&
+                    block.Transactions.First().Outputs[0].Size == 28987200)
                 return true;
 
             if (CurrentBlock != null && CurrentBlock.Header.Hash.SequenceEqual(block.Header.PreviousBlockHash))

@@ -83,6 +83,10 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private int threads;
 
+        private bool synching = false;
+
+        private TaskCompletionSource<object> synchSource = new TaskCompletionSource<object>();
+
         public Miner(IPeerListener peerListener, IWalletRepository walletRepository,
                         IBlockRepository blockRepository,
                         IBalanceRepository balanceRepository,
@@ -262,12 +266,25 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             try
             {
+                if (synching)
+                    await synchSource.Task;
+
                 var peer = await peerListener.Accept();
 
                 while (peer != null)
                 {
-                    Connect(peer);
-                    peer = await peerListener.Accept();
+                    try
+                    {
+                        if (synching)
+                            await synchSource.Task;
+
+                        Connect(peer);
+                        peer = await peerListener.Accept();
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Error(e.ToString());
+                    }
                 }
             }
             catch (Exception e)
@@ -441,7 +458,7 @@ namespace Bizanc.io.Matching.Core.Domain
         private async void ProcessMining()
         {
             Log.Debug("ProcessMining");
-            if (isOracle)
+            if (isOracle || synching)
                 return;
 
             Chain preChain = null;
@@ -811,7 +828,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private async void ReconnectTask(Task task, IPeer peer, int count = 0)
         {
-            if(peerDictionary.Values.Any(p => p.Equal(peer.Address)))
+            if (peerDictionary.Values.Any(p => p.Equal(peer.Address)))
                 return;
 
             var newPeer = await peerListener.Connect(peer.Address);
@@ -900,7 +917,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 {
                     Log.Information("connecting to peer from peerlist response: " + ad);
                     var peer = await peerListener.Connect(ad);
-                    if(peer != null)
+                    if (peer != null)
                         Connect(peer);
                 }
             }
@@ -957,6 +974,15 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async Task Message(IPeer sender, BlockResponse blockResponse)
         {
+            if (!synching && !synchSource.Task.IsCompleted)
+                synching = true;
+
+            if (synching && !synchSource.Task.IsCompleted && blockResponse.End)
+            {
+                synching = false;
+                synchSource.SetResult(null);
+            }
+
             Log.Debug("Received block message");
             foreach (var block in blockResponse.Blocks)
             {
