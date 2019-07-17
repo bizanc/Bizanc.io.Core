@@ -81,8 +81,6 @@ namespace Bizanc.io.Matching.App
             if(conf.Mine)
                 await miner.StartListener();
 
-            Log.CloseAndFlush();
-
             await Task.Delay(Timeout.Infinite);
         }
     }

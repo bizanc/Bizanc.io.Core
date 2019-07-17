@@ -216,6 +216,9 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async Task StartListener()
         {
+            if(synching)
+                await synchSource.Task;
+
             await peerListener.Start();
             ProcessAccept("");
         }
@@ -274,7 +277,8 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             try
             {
-                await synchSource.Task;
+                if (synching)
+                    await synchSource.Task;
 
                 var peer = await peerListener.Accept();
 
@@ -282,7 +286,8 @@ namespace Bizanc.io.Matching.Core.Domain
                 {
                     try
                     {
-                        await synchSource.Task;
+                        if (synching)
+                            await synchSource.Task;
 
                         Connect(peer);
                         peer = await peerListener.Accept();

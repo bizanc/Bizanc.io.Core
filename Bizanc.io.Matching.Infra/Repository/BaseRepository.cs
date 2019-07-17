@@ -18,7 +18,7 @@ namespace Bizanc.io.Matching.Infra.Repository
             {
                 started = true;
                 
-                EmbeddedServer.Instance.StartServer(new ServerOptions(){ FrameworkVersion = "2.2.4"});
+                EmbeddedServer.Instance.StartServer(new ServerOptions(){ FrameworkVersion = "2.2.6"});
 #if DEBUG
                 EmbeddedServer.Instance.OpenStudioInBrowser();
 #endif
