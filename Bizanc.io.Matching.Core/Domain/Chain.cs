@@ -677,7 +677,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 sw.Start();
 
                 var i = 0;
-                var batch = 1000000;
+                var batch = 10000000;
                 var foundHash = false;
                 while (!cancel.IsCancellationRequested && !foundHash)
                 {
