@@ -69,6 +69,7 @@ namespace Bizanc.io.Matching.App
                 {
                     Log.Information("Connecting to peer: " + conf.SeedAddress + ":" + conf.SeedPort);
                     var seednode = new Peer(new TcpClient(conf.SeedAddress, conf.SeedPort));
+                    miner.StartSynch();
                     miner.Connect(seednode);
                 }
                 catch (Exception e)
@@ -76,6 +77,9 @@ namespace Bizanc.io.Matching.App
                     Log.Error(e.ToString());
                 }
             }
+
+            if(conf.Mine)
+                await miner.StartListener();
 
             Log.CloseAndFlush();
 

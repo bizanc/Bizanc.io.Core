@@ -162,9 +162,6 @@ namespace Bizanc.io.Matching.Core.Domain
 
             if (!isOracle)
             {
-                await peerListener.Start();
-                ProcessAccept("");
-
                 if (string.IsNullOrEmpty(minerAddress))
                 {
                     wallet = await walletRepository.Get();
@@ -217,6 +214,17 @@ namespace Bizanc.io.Matching.Core.Domain
                 ProcessMining();
         }
 
+        public async Task StartListener()
+        {
+            await peerListener.Start();
+            ProcessAccept("");
+        }
+
+        public void StartSynch()
+        {
+            synching = true;
+        }
+
         private async void ProcessDeposits()
         {
             var reader = connector.GetDepositsReader();
@@ -266,8 +274,7 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             try
             {
-                if (synching)
-                    await synchSource.Task;
+                await synchSource.Task;
 
                 var peer = await peerListener.Accept();
 
@@ -275,8 +282,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 {
                     try
                     {
-                        if (synching)
-                            await synchSource.Task;
+                        await synchSource.Task;
 
                         Connect(peer);
                         peer = await peerListener.Accept();
@@ -911,8 +917,8 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async void Message(IPeer sender, PeerListResponse listResponse)
         {
-            await sender.InitSource.Task;
-            
+            await synchSource.Task;
+
             foreach (var ad in listResponse.Peers)
             {
                 if (!peerDictionary.Values.Any(p => p.Equal(ad)))
@@ -976,9 +982,6 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async Task Message(IPeer sender, BlockResponse blockResponse)
         {
-            if (!synching && !synchSource.Task.IsCompleted)
-                synching = true;
-
             if (synching && !synchSource.Task.IsCompleted && blockResponse.End)
             {
                 synching = false;
