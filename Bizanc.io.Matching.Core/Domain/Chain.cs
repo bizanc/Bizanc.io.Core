@@ -676,7 +676,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 var sw = new Stopwatch();
                 sw.Start();
 
-                var batch = 50000;
+                var batch = 1000000;
                 var foundHash = false;
 
                 var tasks = new Task[threads];
@@ -692,7 +692,7 @@ namespace Bizanc.io.Matching.Core.Domain
                             var start = tStart + (threads * batch * i);
                             Log.Information("Starting mining batch: " + start);
 
-                            for (int g = start; g < start + batch; g++)
+                            for (int g = start; g < (start + batch); g++)
                             {
                                 if (cancel.IsCancellationRequested)
                                     return;
