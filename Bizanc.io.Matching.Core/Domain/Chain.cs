@@ -685,35 +685,37 @@ namespace Bizanc.io.Matching.Core.Domain
                 {
                     var tStart = batch * j;
                     tasks[j] = Task.Factory.StartNew(() =>
-                    {                      
-                        var i = 0;
-                        while (!cancel.IsCancellationRequested && !foundHash)
+                    {   using (var algorithm = SHA256.Create())
                         {
-                            var start = tStart + (threads * batch * i);
-                            Log.Information("Starting mining batch: " + start);
-
-                            for (int g = start; g < (start + batch); g++)
+                            var i = 0;
+                            while (!cancel.IsCancellationRequested && !foundHash)
                             {
-                                if (cancel.IsCancellationRequested)
-                                    return;
+                                var start = tStart + (threads * batch * i);
+                                Log.Information("Starting mining batch: " + start);
 
-                                if (foundHash)
-                                    return;
-
-                                var hash = CryptoHelper.Hash(header.ToString(g));
-
-                                if (CryptoHelper.IsValidHash(header.Difficult, hash))
+                                for (int g = start; g < (start + batch); g++)
                                 {
-                                    if (!foundHash)
-                                    {
-                                        foundHash = true;
-                                        header.Nonce = g;
-                                        header.Hash = hash;
+                                    if (cancel.IsCancellationRequested)
                                         return;
+
+                                    if (foundHash)
+                                        return;
+
+                                    var hash = algorithm.ComputeHash(Encoding.UTF8.GetBytes(header.ToString(g)));
+
+                                    if (CryptoHelper.IsValidHash(header.Difficult, hash))
+                                    {
+                                        if (!foundHash)
+                                        {
+                                            foundHash = true;
+                                            header.Nonce = g;
+                                            header.Hash = hash;
+                                            return;
+                                        }
                                     }
                                 }
+                                i++;
                             }
-                            i++;
                         }
 
                     }, TaskCreationOptions.LongRunning);
