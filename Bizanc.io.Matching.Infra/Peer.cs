@@ -152,7 +152,7 @@ namespace Bizanc.io.Matching.Infra
         {
             if (cancellationToken.IsCancellationRequested)
                 return false;
-                
+
             var values = address.Split(':');
             var port = values[values.Length - 1];
             var ip = address.Substring(0, address.Length - port.Length - 1);

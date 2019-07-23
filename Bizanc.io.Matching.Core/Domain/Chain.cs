@@ -676,21 +676,23 @@ namespace Bizanc.io.Matching.Core.Domain
                 var sw = new Stopwatch();
                 sw.Start();
 
-                var i = 0;
-                var batch = 10000000;
+                var batch = 50000;
                 var foundHash = false;
-                while (!cancel.IsCancellationRequested && !foundHash)
-                {
-                    var tasks = new Task[threads];
-                    var start = i * threads * batch;
-                    for (int j = 0; j < threads; j++)
-                    {
-                        var tStart = start + (batch * j);
-                        tasks[j] = Task.Factory.StartNew(delegate
-                        {
-                            Log.Information("Starting mining batch: " + tStart);
 
-                            for (int g = tStart; g < tStart + batch; g++)
+                var tasks = new Task[threads];
+                
+                for (int j = 0; j < threads; j++)
+                {
+                    var tStart = batch * j;
+                    tasks[j] = Task.Factory.StartNew(() =>
+                    {                      
+                        var i = 0;
+                        while (!cancel.IsCancellationRequested && !foundHash)
+                        {
+                            var start = tStart + (threads * batch * i);
+                            Log.Information("Starting mining batch: " + start);
+
+                            for (int g = start; g < start + batch; g++)
                             {
                                 if (cancel.IsCancellationRequested)
                                     return;
@@ -711,14 +713,13 @@ namespace Bizanc.io.Matching.Core.Domain
                                     }
                                 }
                             }
+                            i++;
+                        }
 
-                        }, TaskCreationOptions.LongRunning);
-                    }
-
-                    await Task.WhenAll(tasks);
-
-                    i++;
+                    }, TaskCreationOptions.LongRunning);
                 }
+
+                await Task.WhenAll(tasks);
 
                 if (!cancel.IsCancellationRequested && foundHash)
                 {
