@@ -676,49 +676,52 @@ namespace Bizanc.io.Matching.Core.Domain
                 var sw = new Stopwatch();
                 sw.Start();
 
-                var i = 0;
-                var batch = 10000000;
+                var batch = 1000000;
                 var foundHash = false;
-                while (!cancel.IsCancellationRequested && !foundHash)
+
+                var tasks = new Task[threads];
+                
+                for (int j = 0; j < threads; j++)
                 {
-                    var tasks = new Task[threads];
-                    var start = i * threads * batch;
-                    for (int j = 0; j < threads; j++)
-                    {
-                        var tStart = start + (batch * j);
-                        tasks[j] = Task.Factory.StartNew(delegate
+                    var tStart = batch * j;
+                    tasks[j] = Task.Factory.StartNew(() =>
+                    {   using (var algorithm = SHA256.Create())
                         {
-                            Log.Information("Starting mining batch: " + tStart);
-
-                            for (int g = tStart; g < tStart + batch; g++)
+                            var i = 0;
+                            while (!cancel.IsCancellationRequested && !foundHash)
                             {
-                                if (cancel.IsCancellationRequested)
-                                    return;
+                                var start = tStart + (threads * batch * i);
+                                Log.Information("Starting mining batch: " + start);
 
-                                if (foundHash)
-                                    return;
-
-                                var hash = CryptoHelper.Hash(header.ToString(g));
-
-                                if (CryptoHelper.IsValidHash(header.Difficult, hash))
+                                for (int g = start; g < (start + batch); g++)
                                 {
-                                    if (!foundHash)
-                                    {
-                                        foundHash = true;
-                                        header.Nonce = g;
-                                        header.Hash = hash;
+                                    if (cancel.IsCancellationRequested)
                                         return;
+
+                                    if (foundHash)
+                                        return;
+
+                                    var hash = algorithm.ComputeHash(Encoding.UTF8.GetBytes(header.ToString(g)));
+
+                                    if (CryptoHelper.IsValidHash(header.Difficult, hash))
+                                    {
+                                        if (!foundHash)
+                                        {
+                                            foundHash = true;
+                                            header.Nonce = g;
+                                            header.Hash = hash;
+                                            return;
+                                        }
                                     }
                                 }
+                                i++;
                             }
+                        }
 
-                        }, TaskCreationOptions.LongRunning);
-                    }
-
-                    await Task.WhenAll(tasks);
-
-                    i++;
+                    }, TaskCreationOptions.LongRunning);
                 }
+
+                await Task.WhenAll(tasks);
 
                 if (!cancel.IsCancellationRequested && foundHash)
                 {
