@@ -252,6 +252,21 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             while (await blockStream.Reader.WaitToReadAsync())
             {
+                if (synching && !synchSource.Task.IsCompleted)
+                {
+                    synchWatch.Stop();
+                    if (synchWatch.Elapsed.Seconds >= 5)
+                    {
+                        synching = false;
+                        synchSource.SetResult(null);
+                    }
+                    else
+                    {
+                        synchWatch = new Stopwatch();
+                        synchWatch.Start();
+                    }
+                }
+
                 var bk = await blockStream.Reader.ReadAsync();
                 if (await ProcessBlock(bk))
                 {
@@ -1011,21 +1026,6 @@ namespace Bizanc.io.Matching.Core.Domain
         public async Task Message(IPeer sender, Block block)
         {
             await sender.InitSource.Task;
-
-            if (synching && !synchSource.Task.IsCompleted)
-            {
-                synchWatch.Stop();
-                if (synchWatch.Elapsed.Seconds >= 5)
-                {
-                    synching = false;
-                    synchSource.SetResult(null);
-                }
-                else
-                {
-                    synchWatch = new Stopwatch();
-                    synchWatch.Start();
-                }
-            }
 
             await blockStream.Writer.WriteAsync(block);
         }
