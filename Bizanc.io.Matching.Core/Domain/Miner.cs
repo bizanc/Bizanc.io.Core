@@ -989,12 +989,6 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async Task Message(IPeer sender, BlockResponse blockResponse)
         {
-            if (synching && !synchSource.Task.IsCompleted && blockResponse.End)
-            {
-                synching = false;
-                synchSource.SetResult(null);
-            }
-
             Log.Debug("Received block message");
             foreach (var block in blockResponse.Blocks)
             {
@@ -1006,14 +1000,34 @@ namespace Bizanc.io.Matching.Core.Domain
             }
 
             if (blockResponse.End)
+            {
                 sender.InitSource.SetResult(null);
+                synchWatch.Start();
+            }
         }
+
+        private Stopwatch synchWatch = new Stopwatch();
 
         public async Task Message(IPeer sender, Block block)
         {
             await sender.InitSource.Task;
 
-            await blockStream.Writer.WriteAsync(block);
+            if (synching && !synchSource.Task.IsCompleted)
+            {
+                synchWatch.Stop();
+                if (synchWatch.Elapsed.Seconds >= 5)
+                {
+                    synching = false;
+                    synchSource.SetResult(null);
+                }
+                else
+                {
+                    synchWatch = new Stopwatch();
+                    synchWatch.Start();
+                }
+
+                await blockStream.Writer.WriteAsync(block);
+            }
         }
 
         public async Task Message(IPeer sender, HeartBeat heartBeat)
