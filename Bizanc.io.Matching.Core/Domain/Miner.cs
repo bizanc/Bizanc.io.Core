@@ -939,7 +939,8 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async void Message(IPeer sender, PeerListResponse listResponse)
         {
-            await synchSource.Task;
+            if (synching)
+                await synchSource.Task;
 
             foreach (var ad in listResponse.Peers)
             {
