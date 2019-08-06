@@ -1025,9 +1025,9 @@ namespace Bizanc.io.Matching.Core.Domain
                     synchWatch = new Stopwatch();
                     synchWatch.Start();
                 }
-
-                await blockStream.Writer.WriteAsync(block);
             }
+
+            await blockStream.Writer.WriteAsync(block);
         }
 
         public async Task Message(IPeer sender, HeartBeat heartBeat)
