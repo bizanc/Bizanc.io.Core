@@ -216,7 +216,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async Task StartListener()
         {
-            if(synching)
+            if (synching)
                 await synchSource.Task;
 
             await peerListener.Start();
@@ -252,6 +252,21 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             while (await blockStream.Reader.WaitToReadAsync())
             {
+                if (synching && !synchSource.Task.IsCompleted)
+                {
+                    synchWatch.Stop();
+                    if (synchWatch.Elapsed.Seconds >= 5)
+                    {
+                        synching = false;
+                        synchSource.SetResult(null);
+                    }
+                    else
+                    {
+                        synchWatch = new Stopwatch();
+                        synchWatch.Start();
+                    }
+                }
+
                 var bk = await blockStream.Reader.ReadAsync();
                 if (await ProcessBlock(bk))
                 {
@@ -715,7 +730,9 @@ namespace Bizanc.io.Matching.Core.Domain
                     return true;
                 }
 
-                Log.Error("Can't process block");
+                Log.Error("Can't process block depth: " + block.Header.Depth.ToString() + "Timestamp: " + block.Timestamp
+                + " Nonce: " + block.Header.Nonce + " Current: " + chain.CurrentBlock.Header.Depth
+                + " Miner: " + block.Transactions.First().Outputs.First().Wallet);
 
                 return false;
             }
@@ -922,7 +939,8 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async void Message(IPeer sender, PeerListResponse listResponse)
         {
-            await synchSource.Task;
+            if (synching)
+                await synchSource.Task;
 
             foreach (var ad in listResponse.Peers)
             {
@@ -987,12 +1005,6 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async Task Message(IPeer sender, BlockResponse blockResponse)
         {
-            if (synching && !synchSource.Task.IsCompleted && blockResponse.End)
-            {
-                synching = false;
-                synchSource.SetResult(null);
-            }
-
             Log.Debug("Received block message");
             foreach (var block in blockResponse.Blocks)
             {
@@ -1004,8 +1016,13 @@ namespace Bizanc.io.Matching.Core.Domain
             }
 
             if (blockResponse.End)
+            {
                 sender.InitSource.SetResult(null);
+                synchWatch.Start();
+            }
         }
+
+        private Stopwatch synchWatch = new Stopwatch();
 
         public async Task Message(IPeer sender, Block block)
         {
@@ -1617,8 +1634,12 @@ namespace Bizanc.io.Matching.Core.Domain
             }
 
             blockResponse.Blocks.AddRange(blocksToSend);
-            blockResponse.End = true;
             sender.SendMessage(blockResponse);
+
+            if (blocksToSend.Count > 0 && blocksToSend.Last().Header.Depth < chain.CurrentBlock.Header.Depth)
+                await GetBlocks(blocksToSend.Last().Header.Depth, sender);
+            else
+                sender.SendMessage(new BlockResponse() { End = true });
         }
 
         private async void PushTransaction(Transaction tx)
