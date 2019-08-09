@@ -5,7 +5,7 @@
 # For help completing this file, see the "AppSpec File Reference" in the  
 #   "CodeDeploy User Guide" at
 #   https://docs.aws.amazon.com/codedeploy/latest/userguide/app-spec-ref.html
-version: 0.1
+version: 0.0
 # Specify "os: linux" if this revision targets Amazon Linux, 
 #   Red Hat Enterprise Linux (RHEL), or Ubuntu Server  
 #   instances.
