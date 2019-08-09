@@ -8,6 +8,7 @@
 
   <ItemGroup>
    <None Include="appsettings.json" CopyToPublishDirectory="Always" />
+   <None Include="..\appspec.yml" CopyToPublishDirectory="Always" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -19,5 +20,4 @@
   <PropertyGroup>
     <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
   </PropertyGroup>
-
 </Project>
