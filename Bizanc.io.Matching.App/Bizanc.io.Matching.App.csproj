@@ -8,9 +8,9 @@
 
   <ItemGroup>
    <None Include="appsettings.json" CopyToPublishDirectory="Always" />
-   <None Include="codedeploy\appspec.yml" CopyToPublishDirectory="Always" />
-   <None Include="codedeploy\start-seednode-service.sh" CopyToPublishDirectory="Always" />
-   <None Include="codedeploy\stop-seednode-service.sh" CopyToPublishDirectory="Always" />
+   <None Include="appspec.yml"  CopyToPublishDirectory="Always" />
+   <None Include="start-seednode-service.sh" CopyToPublishDirectory="Always" />
+   <None Include="stop-seednode-service.sh" CopyToPublishDirectory="Always" />
   </ItemGroup>
 
   <PropertyGroup>
