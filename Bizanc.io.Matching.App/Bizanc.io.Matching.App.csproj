@@ -8,7 +8,7 @@
 
   <ItemGroup>
    <None Include="appsettings.json" CopyToPublishDirectory="Always" />
-   <None Include="..\appspec.yml" CopyToPublishDirectory="Always" />
+   <None Include="codedeploy\appspec.yml" CopyToPublishDirectory="Always" />
   </ItemGroup>
 
   <PropertyGroup>
