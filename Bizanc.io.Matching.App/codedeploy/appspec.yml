@@ -78,12 +78,12 @@ hooks:
 #   in the script specified in "location" starting from the root of the 
 #   revision's file bundle.
   ApplicationStop:
-    - location: /home/centos/bin/stop-seednode-service.sh
+    - location: stop-seednode-service.sh
       timeout: 300
       runas: root
 # During the ApplicationStart deployment lifecycle event, run the commands 
 #   in the script specified in "location".
   ApplicationStart:
-    - location: /home/centos/bin/start-seednode-service.sh
+    - location: start-seednode-service.sh
       timeout: 300
       runas: root
