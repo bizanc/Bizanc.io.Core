@@ -11,6 +11,7 @@
    <None Include="appspec.yml"  CopyToPublishDirectory="Always" />
    <None Include="start-seednode-service.sh" CopyToPublishDirectory="Always" />
    <None Include="stop-seednode-service.sh" CopyToPublishDirectory="Always" />
+   <None Include="before-install.sh" CopyToPublishDirectory="Always" />
   </ItemGroup>
 
   <PropertyGroup>
