@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-service seednode start
+/bin/bash service seednode start
