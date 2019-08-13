@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-service seednode stop
+/bin/bash service seednode stop
