@@ -252,18 +252,13 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             while (await blockStream.Reader.WaitToReadAsync())
             {
-                if (synching && !synchSource.Task.IsCompleted)
+                if (synching && !synchSource.Task.IsCompleted && synchWatch.IsRunning)
                 {
                     synchWatch.Stop();
                     if (synchWatch.Elapsed.Seconds >= 5)
                     {
                         synching = false;
                         synchSource.SetResult(null);
-                    }
-                    else
-                    {
-                        synchWatch = new Stopwatch();
-                        synchWatch.Start();
                     }
                 }
 
@@ -272,6 +267,12 @@ namespace Bizanc.io.Matching.Core.Domain
                 {
                     Log.Information("Received newer block");
                     Notify(bk);
+                }
+
+                if (synching && !synchSource.Task.IsCompleted)
+                {
+                    synchWatch = new Stopwatch();
+                    synchWatch.Start();
                 }
             }
         }
