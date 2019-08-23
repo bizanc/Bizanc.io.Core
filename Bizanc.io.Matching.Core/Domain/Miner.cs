@@ -266,7 +266,8 @@ namespace Bizanc.io.Matching.Core.Domain
                 if (await ProcessBlock(bk))
                 {
                     Log.Information("Received newer block");
-                    Notify(bk);
+                    if(!synching)
+                        Notify(bk);
                 }
 
                 if (synching && !synchSource.Task.IsCompleted)
@@ -1571,7 +1572,6 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             try
             {
-                await persistLock.EnterReadLock();
                 var result = new List<Block>();
                 var chainBlocks = chain.GetBlocksOldToNew();
                 if (chainBlocks.Count == 0)
@@ -1593,9 +1593,9 @@ namespace Bizanc.io.Matching.Core.Domain
                 else
                     return blocksToSend;
             }
-            finally
+            catch (Exception e)
             {
-                persistLock.ExitReadLock();
+                Log.Error("GetBlocks Faiiled: " + e.ToString());
             }
         }
 
