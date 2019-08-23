@@ -761,34 +761,37 @@ namespace Bizanc.io.Matching.Core.Domain
                 try
                 {
                     var chainData = pChain.Get(40);
-                    if (chainData.CurrentBlock.PreviousHashStr != "")
-                    {
-                        await balanceRepository.Save(chainData.TransactManager.Balance);
-                        await bookRepository.Save(chainData.BookManager);
-                    }
-                    await persistLock.EnterWriteLock();
-                    gotLock = true;
-
                     if (chainData != null && !chainData.Persisted)
                     {
-                        Log.Debug("Persisting block " + pChain.CurrentBlock.Header.Depth);
-
-                        await blockRepository.Save(chainData.CurrentBlock);
-
-                        await depositRepository.Save(chainData.CurrentBlock.Deposits);
-                        await offerRepository.Save(chainData.BookManager.ProcessedOffers);
-                        await offerRepository.SaveCancel(chainData.CurrentBlock.OfferCancels);
-                        await transactionRepository.Save(chainData.CurrentBlock.Transactions);
-                        await withdrawalRepository.Save(chainData.CurrentBlock.Withdrawals);
-                        await tradeRepository.Save(chainData.BookManager.Trades);
-
                         if (chainData.CurrentBlock.PreviousHashStr != "")
-                            await blockRepository.SavePersistInfo(new BlockPersistInfo() { BlockHash = chainData.CurrentBlock.HashStr, TimeStamp = DateTime.Now });
+                        {
+                            await balanceRepository.Save(chainData.TransactManager.Balance);
+                            await bookRepository.Save(chainData.BookManager);
+                        }
+                        
+                        await persistLock.EnterWriteLock();
+                        gotLock = true;
 
-                        Cleanup(pChain);
-                        retry = null;
+                        if (chainData != null && !chainData.Persisted)
+                        {
+                            Log.Debug("Persisting block " + pChain.CurrentBlock.Header.Depth);
+
+                            await blockRepository.Save(chainData.CurrentBlock);
+
+                            await depositRepository.Save(chainData.CurrentBlock.Deposits);
+                            await offerRepository.Save(chainData.BookManager.ProcessedOffers);
+                            await offerRepository.SaveCancel(chainData.CurrentBlock.OfferCancels);
+                            await transactionRepository.Save(chainData.CurrentBlock.Transactions);
+                            await withdrawalRepository.Save(chainData.CurrentBlock.Withdrawals);
+                            await tradeRepository.Save(chainData.BookManager.Trades);
+
+                            if (chainData.CurrentBlock.PreviousHashStr != "")
+                                await blockRepository.SavePersistInfo(new BlockPersistInfo() { BlockHash = chainData.CurrentBlock.HashStr, TimeStamp = DateTime.Now });
+
+                            Cleanup(pChain);
+                            retry = null;
+                        }
                     }
-                }
                 catch (Exception e)
                 {
                     Log.Error("Failed to persist and cleanup block: " + pChain.CurrentBlock.Header.Depth);
