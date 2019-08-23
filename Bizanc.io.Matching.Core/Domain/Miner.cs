@@ -266,7 +266,8 @@ namespace Bizanc.io.Matching.Core.Domain
                 if (await ProcessBlock(bk))
                 {
                     Log.Information("Received newer block");
-                    Notify(bk);
+                    if(!synching)
+                        Notify(bk);
                 }
 
                 if (synching && !synchSource.Task.IsCompleted)
@@ -756,13 +757,22 @@ namespace Bizanc.io.Matching.Core.Domain
                     pChain = retry;
                 else
                     pChain = await PersistStream.Reader.ReadAsync();
+
+                var gotLock = false;
+                
                 try
                 {
-                    await persistLock.EnterWriteLock();
                     var chainData = pChain.Get(40);
-
                     if (chainData != null && !chainData.Persisted)
                     {
+                        if (chainData.CurrentBlock.PreviousHashStr != "")
+                        {
+                            await balanceRepository.Save(chainData.TransactManager.Balance);
+                            await bookRepository.Save(chainData.BookManager);
+                        }
+
+                        await persistLock.EnterWriteLock();
+                        gotLock = true;
                         Log.Debug("Persisting block " + pChain.CurrentBlock.Header.Depth);
 
                         await blockRepository.Save(chainData.CurrentBlock);
@@ -775,11 +785,7 @@ namespace Bizanc.io.Matching.Core.Domain
                         await tradeRepository.Save(chainData.BookManager.Trades);
 
                         if (chainData.CurrentBlock.PreviousHashStr != "")
-                        {
-                            await balanceRepository.Save(chainData.TransactManager.Balance);
-                            await bookRepository.Save(chainData.BookManager);
                             await blockRepository.SavePersistInfo(new BlockPersistInfo() { BlockHash = chainData.CurrentBlock.HashStr, TimeStamp = DateTime.Now });
-                        }
 
                         Cleanup(pChain);
                         retry = null;
@@ -793,7 +799,8 @@ namespace Bizanc.io.Matching.Core.Domain
                 }
                 finally
                 {
-                    persistLock.ExitWriteLock();
+                    if (gotLock)
+                        persistLock.ExitWriteLock();
                 }
             }
         }
@@ -804,10 +811,11 @@ namespace Bizanc.io.Matching.Core.Domain
         }
 
 
-        private void Notify(Block block, string except = "")
+        private void Notify(Block block, Guid except = default(Guid))
         {
             foreach (var peer in peerDictionary.Values)
-                peer.SendMessage(block);
+                if(peer.Id != except)
+                    peer.SendMessage(block);
         }
 
         private void Notify(Offer offer)
@@ -1012,7 +1020,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 if (await ProcessBlock(block))
                 {
                     Log.Information("Received newer block");
-                    Notify(block);
+                    Notify(block, sender.Id);
                 }
             }
 
@@ -1562,7 +1570,6 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             try
             {
-                await persistLock.EnterReadLock();
                 var result = new List<Block>();
                 var chainBlocks = chain.GetBlocksOldToNew();
                 if (chainBlocks.Count == 0)
@@ -1584,10 +1591,12 @@ namespace Bizanc.io.Matching.Core.Domain
                 else
                     return blocksToSend;
             }
-            finally
+            catch (Exception e)
             {
-                persistLock.ExitReadLock();
+                Log.Error("GetBlocks Faiiled: " + e.ToString());
             }
+
+            return new List<Block>();
         }
 
         public async Task GetBlocks(long offSet, IPeer sender)
