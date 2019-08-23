@@ -756,10 +756,18 @@ namespace Bizanc.io.Matching.Core.Domain
                     pChain = retry;
                 else
                     pChain = await PersistStream.Reader.ReadAsync();
+
+                var gotLock = false;
                 try
                 {
-                    await persistLock.EnterWriteLock();
                     var chainData = pChain.Get(40);
+                    if (chainData.CurrentBlock.PreviousHashStr != "")
+                    {
+                        await balanceRepository.Save(chainData.TransactManager.Balance);
+                        await bookRepository.Save(chainData.BookManager);
+                    }
+                    await persistLock.EnterWriteLock();
+                    gotLock = true;
 
                     if (chainData != null && !chainData.Persisted)
                     {
@@ -775,11 +783,7 @@ namespace Bizanc.io.Matching.Core.Domain
                         await tradeRepository.Save(chainData.BookManager.Trades);
 
                         if (chainData.CurrentBlock.PreviousHashStr != "")
-                        {
-                            await balanceRepository.Save(chainData.TransactManager.Balance);
-                            await bookRepository.Save(chainData.BookManager);
                             await blockRepository.SavePersistInfo(new BlockPersistInfo() { BlockHash = chainData.CurrentBlock.HashStr, TimeStamp = DateTime.Now });
-                        }
 
                         Cleanup(pChain);
                         retry = null;
@@ -793,7 +797,8 @@ namespace Bizanc.io.Matching.Core.Domain
                 }
                 finally
                 {
-                    persistLock.ExitWriteLock();
+                    if (gotLock)
+                        persistLock.ExitWriteLock();
                 }
             }
         }
