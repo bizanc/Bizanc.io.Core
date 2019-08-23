@@ -731,18 +731,15 @@ namespace Bizanc.io.Matching.Core.Domain
                     fork.CancelToken = new CancellationTokenSource();
                     return true;
                 }
-
-                Log.Error("Can't process block depth: " + block.Header.Depth.ToString() + "Timestamp: " + block.Timestamp
-                + " Nonce: " + block.Header.Nonce + " Current: " + chain.CurrentBlock.Header.Depth
-                + " Miner: " + block.Transactions.First().Outputs.First().Wallet);
-
-                return false;
             }
             catch (Exception e)
             {
-                Log.Error("Falha ao processar bloco");
                 Log.Error(e.ToString());
             }
+
+            Log.Error("Can't process block depth: " + block.Header.Depth.ToString() + "Timestamp: " + block.Timestamp
+                + " Nonce: " + block.Header.Nonce + " Current: " + chain.CurrentBlock.Header.Depth
+                + " Miner: " + block.Transactions.First().Outputs.First().Wallet);
 
             return false;
         }
