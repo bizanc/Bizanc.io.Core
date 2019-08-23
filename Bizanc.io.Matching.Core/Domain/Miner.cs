@@ -1597,6 +1597,8 @@ namespace Bizanc.io.Matching.Core.Domain
             {
                 Log.Error("GetBlocks Faiiled: " + e.ToString());
             }
+
+            return new List<Block>();
         }
 
         public async Task GetBlocks(long offSet, IPeer sender)
