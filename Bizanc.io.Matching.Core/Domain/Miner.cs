@@ -759,6 +759,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     pChain = await PersistStream.Reader.ReadAsync();
 
                 var gotLock = false;
+                
                 try
                 {
                     var chainData = pChain.Get(40);
@@ -772,26 +773,22 @@ namespace Bizanc.io.Matching.Core.Domain
 
                         await persistLock.EnterWriteLock();
                         gotLock = true;
+                        Log.Debug("Persisting block " + pChain.CurrentBlock.Header.Depth);
 
-                        if (chainData != null && !chainData.Persisted)
-                        {
-                            Log.Debug("Persisting block " + pChain.CurrentBlock.Header.Depth);
+                        await blockRepository.Save(chainData.CurrentBlock);
 
-                            await blockRepository.Save(chainData.CurrentBlock);
+                        await depositRepository.Save(chainData.CurrentBlock.Deposits);
+                        await offerRepository.Save(chainData.BookManager.ProcessedOffers);
+                        await offerRepository.SaveCancel(chainData.CurrentBlock.OfferCancels);
+                        await transactionRepository.Save(chainData.CurrentBlock.Transactions);
+                        await withdrawalRepository.Save(chainData.CurrentBlock.Withdrawals);
+                        await tradeRepository.Save(chainData.BookManager.Trades);
 
-                            await depositRepository.Save(chainData.CurrentBlock.Deposits);
-                            await offerRepository.Save(chainData.BookManager.ProcessedOffers);
-                            await offerRepository.SaveCancel(chainData.CurrentBlock.OfferCancels);
-                            await transactionRepository.Save(chainData.CurrentBlock.Transactions);
-                            await withdrawalRepository.Save(chainData.CurrentBlock.Withdrawals);
-                            await tradeRepository.Save(chainData.BookManager.Trades);
+                        if (chainData.CurrentBlock.PreviousHashStr != "")
+                            await blockRepository.SavePersistInfo(new BlockPersistInfo() { BlockHash = chainData.CurrentBlock.HashStr, TimeStamp = DateTime.Now });
 
-                            if (chainData.CurrentBlock.PreviousHashStr != "")
-                                await blockRepository.SavePersistInfo(new BlockPersistInfo() { BlockHash = chainData.CurrentBlock.HashStr, TimeStamp = DateTime.Now });
-
-                            Cleanup(pChain);
-                            retry = null;
-                        }
+                        Cleanup(pChain);
+                        retry = null;
                     }
                 }
                 catch (Exception e)
@@ -814,10 +811,11 @@ namespace Bizanc.io.Matching.Core.Domain
         }
 
 
-        private void Notify(Block block, string except = "")
+        private void Notify(Block block, Guid except = default(Guid))
         {
             foreach (var peer in peerDictionary.Values)
-                peer.SendMessage(block);
+                if(peer.Id != except)
+                    peer.SendMessage(block);
         }
 
         private void Notify(Offer offer)
@@ -1022,7 +1020,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 if (await ProcessBlock(block))
                 {
                     Log.Information("Received newer block");
-                    Notify(block);
+                    Notify(block, sender.Id);
                 }
             }
 
