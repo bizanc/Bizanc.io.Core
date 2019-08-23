@@ -768,7 +768,7 @@ namespace Bizanc.io.Matching.Core.Domain
                             await balanceRepository.Save(chainData.TransactManager.Balance);
                             await bookRepository.Save(chainData.BookManager);
                         }
-                        
+
                         await persistLock.EnterWriteLock();
                         gotLock = true;
 
@@ -792,6 +792,7 @@ namespace Bizanc.io.Matching.Core.Domain
                             retry = null;
                         }
                     }
+                }
                 catch (Exception e)
                 {
                     Log.Error("Failed to persist and cleanup block: " + pChain.CurrentBlock.Header.Depth);
