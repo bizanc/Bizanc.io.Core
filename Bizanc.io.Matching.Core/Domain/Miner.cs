@@ -1366,7 +1366,9 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async Task<bool> AppendTransaction(Transaction tx)
         {
-            if (tx.Timestamp < chain.GetLastBlockTime() || tx.Timestamp > DateTime.Now.ToUniversalTime())
+            var lastBlock = chain.Get(20);
+
+            if (lastBlock != null && (tx.Timestamp < lastBlock.CurrentBlock.Timestamp || tx.Timestamp > DateTime.Now.ToUniversalTime()))
                 return false;
 
             if (!CryptoHelper.IsValidBizancAddress(tx.Wallet)
