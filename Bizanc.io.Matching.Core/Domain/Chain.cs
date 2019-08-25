@@ -238,11 +238,16 @@ namespace Bizanc.io.Matching.Core.Domain
             return default(DateTime).Ticks;
         }
 
-        public long GetLastBlockDepth()
+        public long GetLastBlockDepth(int limit = 20, int count = 0)
         {
+            if (count == limit)
+                return CurrentBlock.Header.Depth;
+
+            count++;
+
             if (Previous != null)
             {
-                var result = Previous.GetLastBlockDepth();
+                var result = Previous.GetLastBlockDepth(limit, count);
                 if (result != -1)
                     return result;
             }
@@ -338,8 +343,13 @@ namespace Bizanc.io.Matching.Core.Domain
             await commitLocker.WaitAsync();
         }
 
-        public async Task<bool> Contains(Transaction tx, bool first = true)
+        public async Task<bool> Contains(Transaction tx, bool first = true, int limit = 20, int count = 0)
         {
+            if(count == limit)
+                return false;
+
+            count++;
+
             if (first && await Pool.Contains(tx))
                 return true;
 
@@ -349,7 +359,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     return true;
 
                 if (Previous != null)
-                    return await Previous.Contains(tx, false);
+                    return await Previous.Contains(tx, false, limit, count);
             }
 
             return false;
@@ -395,15 +405,20 @@ namespace Bizanc.io.Matching.Core.Domain
             return false;
         }
 
-        public bool Contains(Block block)
+        public bool Contains(Block block, int limit = 20, int count = 0)
         {
+            if (count == limit)
+                return false;
+
+            count++;
+
             if (CurrentBlock != null)
             {
                 if (CurrentBlock.HashStr == block.HashStr)
                     return true;
 
                 if (Previous != null)
-                    return Previous.Contains(block);
+                    return Previous.Contains(block, limit, count);
             }
 
             return false;
@@ -482,8 +497,13 @@ namespace Bizanc.io.Matching.Core.Domain
             return null;
         }
 
-        public async Task<bool> Contains(Deposit dp, bool first = true)
+        public async Task<bool> Contains(Deposit dp, bool first = true, int limit = 20, int count = 0)
         {
+            if (count == limit)
+                return false;
+
+            count++;
+
             if (first && await Pool.Contains(dp))
                 return true;
 
@@ -493,14 +513,19 @@ namespace Bizanc.io.Matching.Core.Domain
                     return true;
 
                 if (Previous != null)
-                    return await Previous.Contains(dp, false);
+                    return await Previous.Contains(dp, false, limit, count);
             }
 
             return false;
         }
 
-        public async Task<bool> Contains(Offer of, bool first = true)
+        public async Task<bool> Contains(Offer of, bool first = true, int limit = 20, int count = 0)
         {
+            if (count == limit)
+                return false;
+
+            count++;
+
             if (first && (await Pool.Contains(of) || BookManager.ContainsOffer(of)))
                 return true;
 
@@ -510,14 +535,19 @@ namespace Bizanc.io.Matching.Core.Domain
                     return true;
 
                 if (Previous != null)
-                    return await Previous.Contains(of, false);
+                    return await Previous.Contains(of, false, limit, count);
             }
 
             return false;
         }
 
-        public async Task<bool> Contains(OfferCancel of, bool first = true)
+        public async Task<bool> Contains(OfferCancel of, bool first = true, int limit = 20, int count = 0)
         {
+            if (count == limit)
+                return false;
+
+            count++;
+
             if (first && await Pool.Contains(of))
                 return true;
 
@@ -527,15 +557,20 @@ namespace Bizanc.io.Matching.Core.Domain
                     return true;
 
                 if (Previous != null)
-                    return await Previous.Contains(of, false);
+                    return await Previous.Contains(of, false, limit, count);
             }
 
             return false;
         }
 
 
-        public async Task<bool> Contains(Withdrawal wd, bool first = true)
+        public async Task<bool> Contains(Withdrawal wd, bool first = true, int limit = 20, int count = 0)
         {
+            if (count == limit)
+                return false;
+
+            count++;
+
             if (first && await Pool.Contains(wd))
                 return true;
 
@@ -545,7 +580,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     return true;
 
                 if (Previous != null)
-                    return await Previous.Contains(wd, false);
+                    return await Previous.Contains(wd, false, limit, count);
             }
 
             return false;
