@@ -1393,10 +1393,13 @@ namespace Bizanc.io.Matching.Core.Domain
             }
 
             tx.BuildHash();
+
+
             if (!await chain.Contains(tx) && await chain.Append(tx))
             {
-                foreach (var f in forks.Values)
-                    await f.Append(tx);
+                foreach (var f in forks.Values.AsParallel())
+                    if(!await f.Contains(tx))
+                        await f.Append(tx);
 
                 Notify(tx);
                 return true;
