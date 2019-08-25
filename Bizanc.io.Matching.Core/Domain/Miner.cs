@@ -266,7 +266,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 if (await ProcessBlock(bk))
                 {
                     Log.Information("Received newer block");
-                    if(!synching)
+                    if (!synching)
                         Notify(bk);
                 }
 
@@ -756,7 +756,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     pChain = await PersistStream.Reader.ReadAsync();
 
                 var gotLock = false;
-                
+
                 try
                 {
                     var chainData = pChain.Get(40);
@@ -811,7 +811,7 @@ namespace Bizanc.io.Matching.Core.Domain
         private void Notify(Block block, Guid except = default(Guid))
         {
             foreach (var peer in peerDictionary.Values)
-                if(peer.Id != except)
+                if (peer.Id != except)
                     peer.SendMessage(block);
         }
 
@@ -1394,18 +1394,30 @@ namespace Bizanc.io.Matching.Core.Domain
 
             tx.BuildHash();
 
-
-            if (!await chain.Contains(tx) && await chain.Append(tx))
+            var append = false;
+            try
             {
-                foreach (var f in forks.Values.AsParallel())
-                    if(!await f.Contains(tx))
-                        await f.Append(tx);
+                await commitLocker.EnterWriteLock();
+                if (!await chain.Contains(tx) && await chain.Append(tx))
+                {
+                    append = true;
+                    foreach (var f in forks.Values.AsParallel())
+                        if (!await f.Contains(tx))
+                            await f.Append(tx);
+                }
+            }
+            finally
+            {
+                commitLocker.ExitWriteLock();
+            }
 
+            if (append)
+            {
                 Notify(tx);
                 return true;
             }
-
-            return false;
+            else
+                return false;
         }
 
         public async Task<Withdrawal> GetWithdrawalById(string id)
