@@ -1219,16 +1219,31 @@ namespace Bizanc.io.Matching.Core.Domain
             }
 
             of.BuildHash();
-            if (!await chain.Contains(of) && await chain.Append(of))
-            {
-                foreach (var f in forks.Values)
-                    await f.Append(of);
 
+            var append = false;
+            try
+            {
+                await commitLocker.EnterWriteLock();
+                if (!await chain.Contains(of) && await chain.Append(of))
+                {
+                    append = true;
+                    foreach (var f in forks.Values.AsParallel())
+                        if (!await f.Contains(of))
+                            await f.Append(of);
+                }
+            }
+            finally
+            {
+                commitLocker.ExitWriteLock();
+            }
+
+            if (append)
+            {
                 Notify(of);
                 return true;
             }
-
-            return false;
+            else
+                return false;
         }
 
         public async Task<bool> AppendOfferCancel(OfferCancel of)
