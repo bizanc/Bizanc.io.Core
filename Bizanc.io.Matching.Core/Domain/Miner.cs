@@ -972,11 +972,12 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async Task Message(IPeer sender, TransactionPoolResponse txPool)
         {
-            if (!sender.InitSource.Task.IsCompleted)
-                await sender.InitSource.Task;
+            // if (!sender.InitSource.Task.IsCompleted)
+            //     await sender.InitSource.Task;
 
-            foreach (var tx in txPool.TransactionPool)
-                await AppendTransaction(tx);
+            // foreach (var tx in txPool.TransactionPool)
+            //     await AppendTransaction(tx);
+            await Task.CompletedTask;
         }
 
         public async Task Message(IPeer sender, Transaction tx)
