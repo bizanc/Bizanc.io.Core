@@ -190,22 +190,7 @@ namespace Bizanc.io.Matching.Core.Domain
             return result;
         }
 
-        public DateTime GetLastBlockTime()
-        {
-            if (Previous != null)
-            {
-                var result = Previous.GetLastBlockTime();
-                if (result != default(DateTime))
-                    return result;
-            }
-
-            if (CurrentBlock != null)
-                return CurrentBlock.Timestamp;
-
-            return default(DateTime);
-        }
-
-        public DateTime GetLastBlockTime(int limit, int count = 0)
+        public DateTime GetLastBlockTime(int limit = 20, int count = 0)
         {
             if (Previous != null)
             {
