@@ -858,7 +858,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private int GetTargetDiff()
         {
-            var lastDeth = this.GetLastBlockDepth();
+            var lastDeth = this.GetLastBlockDepth(22);
             var targetDiff = CurrentBlock.Header.Difficult;
             if (CurrentBlock != null && (CurrentBlock.Header.Depth - 20) >= lastDeth)
             {
