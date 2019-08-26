@@ -1201,9 +1201,6 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async Task<bool> AppendOffer(Offer of)
         {
-            if (of.Timestamp < chain.GetLastBlockTime() || of.Timestamp > DateTime.Now.ToUniversalTime())
-                return false;
-
             if (!CryptoHelper.IsValidBizancAddress(of.Wallet))
             {
                 Log.Error("Received offer with invalid bizanc address");
@@ -1224,6 +1221,9 @@ namespace Bizanc.io.Matching.Core.Domain
             try
             {
                 await commitLocker.EnterWriteLock();
+                if (of.Timestamp < chain.GetLastBlockTime() || of.Timestamp > DateTime.Now.ToUniversalTime())
+                    return false;
+                    
                 if (!await chain.Contains(of) && await chain.Append(of))
                 {
                     append = true;
@@ -1258,27 +1258,43 @@ namespace Bizanc.io.Matching.Core.Domain
                 return false;
             }
 
-            of.BuildHash();
-            if (!await chain.Contains(of))
+            if (!CryptoHelper.IsValidSignature(of.ToString(), of.Wallet, of.Signature))
             {
-                if (!CryptoHelper.IsValidSignature(of.ToString(), of.Wallet, of.Signature))
-                {
-                    Log.Error("Offer Cancel with invalid signature");
-                    Log.Error(of.ToString());
-                    return false;
-                }
-
-                if (await chain.Append(of))
-                {
-                    foreach (var f in forks.Values)
-                        await f.Append(of);
-
-                    Notify(of);
-                    return true;
-                }
+                Log.Error("Offer Cancel with invalid signature");
+                Log.Error(of.ToString());
+                return false;
             }
 
-            return false;
+            of.BuildHash();
+
+
+            var append = false;
+            try
+            {
+                await commitLocker.EnterWriteLock();
+                if (of.Timestamp < chain.GetLastBlockTime() || of.Timestamp > DateTime.Now.ToUniversalTime())
+                    return false;
+
+                if (!await chain.Contains(of) && await chain.Append(of))
+                {
+                    append = true;
+                    foreach (var f in forks.Values.AsParallel())
+                        if (!await f.Contains(of))
+                            await f.Append(of);
+                }
+            }
+            finally
+            {
+                commitLocker.ExitWriteLock();
+            }
+
+            if (append)
+            {
+                Notify(of);
+                return true;
+            }
+            else
+                return false;
         }
 
         private async Task AppendDeposit(Deposit deposit)
@@ -1381,11 +1397,6 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async Task<bool> AppendTransaction(Transaction tx)
         {
-            var lastBlock = chain.Get(20);
-
-            if (lastBlock != null && (tx.Timestamp < lastBlock.CurrentBlock.Timestamp || tx.Timestamp > DateTime.Now.ToUniversalTime()))
-                return false;
-
             if (!CryptoHelper.IsValidBizancAddress(tx.Wallet)
                 || tx.Outputs.Any(o => !CryptoHelper.IsValidBizancAddress(o.Wallet)))
             {
@@ -1413,6 +1424,9 @@ namespace Bizanc.io.Matching.Core.Domain
             try
             {
                 await commitLocker.EnterWriteLock();
+                if (tx.Timestamp < chain.GetLastBlockTime() || tx.Timestamp > DateTime.Now.ToUniversalTime())
+                    return false;
+
                 if (!await chain.Contains(tx) && await chain.Append(tx))
                 {
                     append = true;
@@ -1511,9 +1525,6 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async Task<bool> AppendWithdrawal(Withdrawal wd)
         {
-            if (wd.Timestamp < chain.GetLastBlockTime() || wd.Timestamp > DateTime.Now.ToUniversalTime())
-                return false;
-
             if (!CryptoHelper.IsValidBizancAddress(wd.SourceWallet))
             {
                 Log.Error("Received withdraw with invalid bizanc address");
@@ -1548,16 +1559,34 @@ namespace Bizanc.io.Matching.Core.Domain
             }
 
             wd.BuildHash();
-            if (!await chain.Contains(wd) && await chain.Append(wd))
-            {
-                foreach (var f in forks.Values)
-                    await f.Append(wd);
 
+            var append = false;
+            try
+            {
+                await commitLocker.EnterWriteLock();
+                if (wd.Timestamp < chain.GetLastBlockTime() || wd.Timestamp > DateTime.Now.ToUniversalTime())
+                    return false;
+
+                if (!await chain.Contains(wd) && await chain.Append(wd))
+                {
+                    append = true;
+                    foreach (var f in forks.Values.AsParallel())
+                        if (!await f.Contains(wd))
+                            await f.Append(wd);
+                }
+            }
+            finally
+            {
+                commitLocker.ExitWriteLock();
+            }
+
+            if (append)
+            {
                 Notify(wd);
                 return true;
             }
-
-            return false;
+            else
+                return false;
         }
 
         public async Task<IList<Block>> ListBlocks(int size)

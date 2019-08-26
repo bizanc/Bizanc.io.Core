@@ -225,16 +225,14 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public long GetLastBlockDepth(int limit = 20, int count = 0)
         {
-            if (count == limit)
-                return CurrentBlock.Header.Depth;
-
-            count++;
-
             if (Previous != null)
             {
-                var result = Previous.GetLastBlockDepth(limit, count);
-                if (result != -1)
-                    return result;
+                if (count < limit)
+                {
+                    var result = Previous.GetLastBlockDepth(limit, ++count);
+                    if (result != -1)
+                        return result;
+                }
             }
 
             if (CurrentBlock != null)
