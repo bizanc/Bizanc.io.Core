@@ -860,7 +860,7 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             var lastDeth = this.GetLastBlockDepth(22);
             var targetDiff = CurrentBlock.Header.Difficult;
-            if (CurrentBlock != null && (CurrentBlock.Header.Depth - 20) >= lastDeth)
+            if (CurrentBlock != null && CurrentBlock.Header.Depth != 3863 && (CurrentBlock.Header.Depth - 20) >= lastDeth)
             {
                 var frame = (CurrentBlock.Timestamp - this.GetLastBlockTime(20));
                 var avg = frame.TotalSeconds / 20;
