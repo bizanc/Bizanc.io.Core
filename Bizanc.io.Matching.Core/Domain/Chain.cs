@@ -319,6 +319,14 @@ namespace Bizanc.io.Matching.Core.Domain
 
             await Pool.Remove(tx);
             await Pool.Remove(CurrentBlock.Withdrawals);
+
+            var lastBlockTime = GetLastBlockTime();
+
+            await Pool.Remove((await GetDepositPool()).Where(i => i.Timestamp < lastBlockTime));
+            await Pool.Remove((await GetOfferPool()).Where(i => i.Timestamp < lastBlockTime));
+            await Pool.Remove((await GetOfferCancelPool()).Where(i => i.Timestamp < lastBlockTime));
+            await Pool.Remove((await GetTransactionPool()).Where(i => i.Timestamp < lastBlockTime));
+            await Pool.Remove((await GetWithdrawalPool()).Where(i => i.Timestamp < lastBlockTime));
         }
 
         public async Task EnterCommitLock()
@@ -328,7 +336,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public async Task<bool> Contains(Transaction tx, bool first = true, int limit = 20, int count = 0)
         {
-            if(count == limit)
+            if (count == limit)
                 return false;
 
             count++;
@@ -698,12 +706,13 @@ namespace Bizanc.io.Matching.Core.Domain
                 var foundHash = false;
 
                 var tasks = new Task[threads];
-                
+
                 for (int j = 0; j < threads; j++)
                 {
                     var tStart = batch * j;
                     tasks[j] = Task.Factory.StartNew(() =>
-                    {   using (var algorithm = SHA256.Create())
+                    {
+                        using (var algorithm = SHA256.Create())
                         {
                             var i = 0;
                             while (!cancel.IsCancellationRequested && !foundHash)
