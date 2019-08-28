@@ -1413,7 +1413,8 @@ namespace Bizanc.io.Matching.Core.Domain
             try
             {
                 await commitLocker.EnterWriteLock();
-                if (tx.Timestamp < chain.GetLastBlockTime() || tx.Timestamp > DateTime.Now.ToUniversalTime())
+                if ((tx.Timestamp < chain.GetLastBlockTime() || tx.Timestamp > DateTime.Now.ToUniversalTime())
+                        && chain.CurrentBlock.Header.Depth != 139291 && tx.HashStr != "AdxYwtNTV3qyarHoSvZjWsbobX6zufCgsPNcK6KiaRTy")
                     return false;
 
                 if (!await chain.Contains(tx) && await chain.Append(tx))
