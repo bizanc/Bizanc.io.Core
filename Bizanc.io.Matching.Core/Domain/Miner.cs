@@ -577,21 +577,10 @@ namespace Bizanc.io.Matching.Core.Domain
 
                 Log.Debug("Offers Appended, Appending Transactions...");
 
-                if (block.TransactionsDictionary.Count > 100)
+                foreach (var tx in block.Transactions)
                 {
-                    block.Transactions.AsParallel().ForAll(tx =>
-                    {
-                        if (!string.IsNullOrEmpty(tx.Wallet))
-                            AppendTransaction(tx).Wait();
-                    });
-                }
-                else
-                {
-                    foreach (var tx in block.Transactions)
-                    {
-                        if (!string.IsNullOrEmpty(tx.Wallet))
-                            AppendTransaction(tx).Wait();
-                    }
+                    if (!string.IsNullOrEmpty(tx.Wallet))
+                        AppendTransaction(tx).Wait();
                 }
 
                 Log.Debug("Transactions Appended, Appending WIthdrawals...");
