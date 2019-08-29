@@ -48,24 +48,61 @@ namespace Bizanc.io.Matching.Infra.Connector
 
         private async Task<(List<Deposit>, List<WithdrawInfo>)> LoadOps(string blockNumberDeposits)
         {
-            await client.WaitServerStartedAsync();
-            session = await client.CreateWebsocketNotificationSessionAsync();
-            session.ListenTrackedSources(new[] { oracleAddress });
-            ProcessNotifications();
+            var listenerStarted = false;
 
-            var oldTx = (await client.GetTransactionsAsync(oracleAddress)).ConfirmedTransactions.Transactions;
-
-            int heigth = 0;
-            if (!string.IsNullOrEmpty(blockNumberDeposits))
-                heigth = int.Parse(blockNumberDeposits);
-
-            if (heigth > 0)
+            while (!listenerStarted)
             {
-                oldTx = oldTx.Where(t => t.Height > heigth).ToList();
-                return ProcessOperations(oldTx);
+                try
+                {
+                    await client.WaitServerStartedAsync();
+                    session = await client.CreateWebsocketNotificationSessionAsync();
+                    session.ListenTrackedSources(new[] { oracleAddress });
+                    ProcessNotifications();
+                    listenerStarted = true;
+                }
+                catch (Exception e)
+                {
+                    Log.Error("Failed to stablish bitcoin websocket connector ");
+                    Log.Error(e.ToString());
+                    await Task.Delay(3000);
+                }
             }
-            else
-                return ProcessOperations(oldTx);
+
+
+            var opLoaded = false;
+
+            while (!opLoaded)
+            {
+                try
+                {
+                    var oldTx = (await client.GetTransactionsAsync(oracleAddress)).ConfirmedTransactions.Transactions;
+
+                    opLoaded = true;
+                    int heigth = 0;
+                    if (!string.IsNullOrEmpty(blockNumberDeposits))
+                        heigth = int.Parse(blockNumberDeposits);
+
+                    if (heigth > 0)
+                    {
+                        oldTx = oldTx.Where(t => t.Height > heigth).ToList();
+                        return ProcessOperations(oldTx);
+                    }
+                    else
+                        return ProcessOperations(oldTx);
+                }
+                catch (Exception e)
+                {
+                    Log.Error("Failed to load transactions");
+                    Log.Error(e.ToString());
+
+                    if(opLoaded)
+                        throw;
+                        
+                    await Task.Delay(3000);
+                }
+            }
+
+            return (new List<Deposit>(), new List<WithdrawInfo>());
         }
 
         private async void ProcessNotifications()
