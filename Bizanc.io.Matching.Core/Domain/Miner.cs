@@ -147,7 +147,12 @@ namespace Bizanc.io.Matching.Core.Domain
 
             var persistPoint = (await blockRepository.GetPersistInfo()).OrderBy(p => p.TimeStamp).LastOrDefault();
 
-            if (persistPoint == null || !persistState)
+            Block block = null;
+
+            if(persistPoint != null)
+                block = await blockRepository.Get(persistPoint.BlockHash);
+        
+            if (block == null || !persistState)
             {
                 chain = new Chain(threads);
                 if (!persistState)
@@ -164,13 +169,13 @@ namespace Bizanc.io.Matching.Core.Domain
                     var blocks = await blockRepository.Get(0);
                     while (await blocks.Reader.WaitToReadAsync())
                     {
-                        var block = await blocks.Reader.ReadAsync();
-                        block.BuildDictionary();
-                        if (await ProcessBlock(block))
+                        var blk = await blocks.Reader.ReadAsync();
+                        blk.BuildDictionary();
+                        if (await ProcessBlock(blk))
                             chain.Persisted = true;
                         else
                         {
-                            Log.Error("Failed to process synched block: " + block.Hash);
+                            Log.Error("Failed to process synched block: " + blk.Hash);
                             throw new Exception("Invalid Persisted Block");
                         }
                     }
@@ -183,7 +188,6 @@ namespace Bizanc.io.Matching.Core.Domain
 
                 var balance = balances.Where(b => b.BlockHash == persistPoint.BlockHash).FirstOrDefault();
                 var book = books.Where(b => b.BlockHash == persistPoint.BlockHash).FirstOrDefault();
-                var block = await blockRepository.Get(persistPoint.BlockHash);
                 var lastBLock = await blockRepository.Get(block.PreviousHashStr);
                 var transact = new Immutable.TransactionManager(balance);
                 book = new Immutable.Book(book, transact);
