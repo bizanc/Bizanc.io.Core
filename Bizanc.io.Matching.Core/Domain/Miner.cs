@@ -151,33 +151,30 @@ namespace Bizanc.io.Matching.Core.Domain
 
             if(persistPoint != null)
                 block = await blockRepository.Get(persistPoint.BlockHash);
-        
+
             if (block == null || !persistState)
             {
                 chain = new Chain(threads);
-                if (!persistState)
+                synching = true;
+
+                var lDeposits = await depositRepository.List();
+                while (await lDeposits.WaitToReadAsync())
                 {
-                    synching = true;
+                    var dp = await lDeposits.ReadAsync();
+                    await chain.Append(dp);
+                }
 
-                    var lDeposits = await depositRepository.List();
-                    while (await lDeposits.WaitToReadAsync())
+                var blocks = await blockRepository.Get(0);
+                while (await blocks.Reader.WaitToReadAsync())
+                {
+                    var blk = await blocks.Reader.ReadAsync();
+                    blk.BuildDictionary();
+                    if (await ProcessBlock(blk))
+                        chain.Persisted = true;
+                    else
                     {
-                        var dp = await lDeposits.ReadAsync();
-                        await chain.Append(dp);
-                    }
-
-                    var blocks = await blockRepository.Get(0);
-                    while (await blocks.Reader.WaitToReadAsync())
-                    {
-                        var blk = await blocks.Reader.ReadAsync();
-                        blk.BuildDictionary();
-                        if (await ProcessBlock(blk))
-                            chain.Persisted = true;
-                        else
-                        {
-                            Log.Error("Failed to process synched block: " + blk.Hash);
-                            throw new Exception("Invalid Persisted Block");
-                        }
+                        Log.Error("Failed to process synched block: " + blk.Hash);
+                        throw new Exception("Invalid Persisted Block");
                     }
                 }
             }
