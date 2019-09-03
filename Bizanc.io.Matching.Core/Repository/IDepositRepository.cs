@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Bizanc.io.Matching.Core.Domain;
 
@@ -20,5 +21,9 @@ namespace Bizanc.io.Matching.Core.Repository
         Task<Deposit> GetByTxHash(string txHash);
 
         Task<List<Deposit>> GetByTarget(string wallet, int size);
+
+        Task<ChannelReader<Deposit>> List();
+
+        Task<ChannelReader<Deposit>> List(DateTime from);
     }
 }

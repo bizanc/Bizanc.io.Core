@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Bizanc.io.Matching.Core.Repository;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using Raven.Embedded;
 
 namespace Bizanc.io.Matching.Infra.Repository
@@ -53,6 +56,17 @@ namespace Bizanc.io.Matching.Infra.Repository
 
                 s.Advanced.WaitForIndexesAfterSaveChanges(new TimeSpan(1, 0, 0));
             }
+        }
+
+        public async Task StreamResult(IAsyncDocumentSession session, IQueryable<T> query, Channel<T> result)
+        {
+            using (var stream = await session.Advanced.StreamAsync(query))
+            {
+                while (await stream.MoveNextAsync())
+                    await result.Writer.WriteAsync(stream.Current.Document);
+            }
+
+            result.Writer.Complete();
         }
     }
 }
