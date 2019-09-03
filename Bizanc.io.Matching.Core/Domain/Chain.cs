@@ -322,7 +322,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
             var lastBlockTime = GetLastBlockTime();
 
-            await Pool.Remove((await GetDepositPool()).Where(i => i.Timestamp < lastBlockTime));
+            //await Pool.Remove((await GetDepositPool()).Where(i => i.Timestamp < lastBlockTime));
             await Pool.Remove((await GetOfferPool()).Where(i => i.Timestamp < lastBlockTime));
             await Pool.Remove((await GetOfferCancelPool()).Where(i => i.Timestamp < lastBlockTime));
             await Pool.Remove((await GetTransactionPool()).Where(i => i.Timestamp < lastBlockTime));

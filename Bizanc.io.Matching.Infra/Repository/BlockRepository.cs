@@ -67,17 +67,6 @@ namespace Bizanc.io.Matching.Infra.Repository
                 return await s.Query<Block>().Where(b => b.HashStr == blockHash).FirstOrDefaultAsync();
         }
 
-        private async Task StreamResult(IAsyncDocumentSession session, IOrderedQueryable<Block> query, Channel<Block> result)
-        {
-            using (var stream = await session.Advanced.StreamAsync(query))
-            {
-                while (await stream.MoveNextAsync())
-                    await result.Writer.WriteAsync(stream.Current.Document);
-            }
-
-            result.Writer.Complete();
-        }
-
         public async Task<Channel<Block>> Get(long fromDepth, long toDepth = 0)
         {
             using (var s = Store.OpenAsyncSession())

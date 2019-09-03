@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Bizanc.io.Matching.Core.Domain;
 using Bizanc.io.Matching.Core.Repository;
@@ -63,6 +64,28 @@ namespace Bizanc.io.Matching.Infra.Repository
                             .OrderByDescending(d => d.Timestamp)
                             .Take(size)
                             .ToListAsync();
+        }
+
+        public async Task<ChannelReader<Deposit>> List()
+        {
+            using (var s = Store.OpenAsyncSession())
+            {
+                var result = Channel.CreateUnbounded<Deposit>(); ;
+                await StreamResult(s, s.Query<Deposit>(), result);
+
+                return result;
+            }
+        }
+
+        public async Task<ChannelReader<Deposit>> List(DateTime from)
+        {
+            using (var s = Store.OpenAsyncSession())
+            {
+                var result = Channel.CreateUnbounded<Deposit>(); ;
+                await StreamResult(s, s.Query<Deposit>().Where(d => d.Timestamp >= from), result);
+
+                return result;
+            }
         }
     }
 }
