@@ -145,43 +145,28 @@ namespace Bizanc.io.Matching.Core.Domain
             withdrawalStream = Channel.CreateUnbounded<Withdrawal>();
             PersistStream = Channel.CreateUnbounded<Chain>();
 
-            if (persistState)
+            var persistPoint = (await blockRepository.GetPersistInfo()).OrderBy(p => p.TimeStamp).LastOrDefault();
+
+            if (persistPoint == null || !persistState)
             {
-                var persistPoint = (await blockRepository.GetPersistInfo()).OrderBy(p => p.TimeStamp).LastOrDefault();
-                
-                if (persistPoint == null)
-                    chain = new Chain(threads);
-                else
+                chain = new Chain(threads);
+                if (!persistState)
                 {
-                    var balances = await balanceRepository.Get();
-                    var books = await bookRepository.Get();
-
-                    var balance = balances.Where(b => b.BlockHash == persistPoint.BlockHash).FirstOrDefault();
-                    var book = books.Where(b => b.BlockHash == persistPoint.BlockHash).FirstOrDefault();
-                    var block = await blockRepository.Get(persistPoint.BlockHash);
-                    var lastBLock = await blockRepository.Get(block.PreviousHashStr);
-                    var transact = new Immutable.TransactionManager(balance);
-                    book = new Immutable.Book(book, transact);
-                    var deposit = new Immutable.Deposit(null, transact);
-                    var withdrawal = new Immutable.Withdrawal(null, transact);
-                    chain = new Chain(chain, transact, deposit, withdrawal, book, block, lastBLock, new Immutable.Pool(), threads);
-                    chain.Persisted = true;
-
                     synching = true;
 
-                    var lDeposits = await depositRepository.List(persistPoint.TimeStamp);
+                    var lDeposits = await depositRepository.List();
                     while (await lDeposits.WaitToReadAsync())
                     {
                         var dp = await lDeposits.ReadAsync();
                         await chain.Append(dp);
                     }
 
-                    var blocks = await blockRepository.Get(chain.CurrentBlock.Header.Depth + 1);
+                    var blocks = await blockRepository.Get(0);
                     while (await blocks.Reader.WaitToReadAsync())
                     {
-                        var blk = await blocks.Reader.ReadAsync();
-                        blk.BuildDictionary();
-                        if (await ProcessBlock(blk))
+                        var block = await blocks.Reader.ReadAsync();
+                        block.BuildDictionary();
+                        if (await ProcessBlock(block))
                             chain.Persisted = true;
                         else
                         {
@@ -192,8 +177,44 @@ namespace Bizanc.io.Matching.Core.Domain
                 }
             }
             else
-                chain = new Chain(threads);
+            {
+                var balances = await balanceRepository.Get();
+                var books = await bookRepository.Get();
 
+                var balance = balances.Where(b => b.BlockHash == persistPoint.BlockHash).FirstOrDefault();
+                var book = books.Where(b => b.BlockHash == persistPoint.BlockHash).FirstOrDefault();
+                var block = await blockRepository.Get(persistPoint.BlockHash);
+                var lastBLock = await blockRepository.Get(block.PreviousHashStr);
+                var transact = new Immutable.TransactionManager(balance);
+                book = new Immutable.Book(book, transact);
+                var deposit = new Immutable.Deposit(null, transact);
+                var withdrawal = new Immutable.Withdrawal(null, transact);
+                chain = new Chain(chain, transact, deposit, withdrawal, book, block, lastBLock, new Immutable.Pool(), threads);
+                chain.Persisted = true;
+
+                synching = true;
+
+                var lDeposits = await depositRepository.List(persistPoint.TimeStamp);
+                while (await lDeposits.WaitToReadAsync())
+                {
+                    var dp = await lDeposits.ReadAsync();
+                    await chain.Append(dp);
+                }
+
+                var blocks = await blockRepository.Get(chain.CurrentBlock.Header.Depth + 1);
+                while (await blocks.Reader.WaitToReadAsync())
+                {
+                    var blk = await blocks.Reader.ReadAsync();
+                    blk.BuildDictionary();
+                    if (await ProcessBlock(blk))
+                        chain.Persisted = true;
+                    else
+                    {
+                        Log.Error("Failed to process synched block: " + block.Hash);
+                        throw new Exception("Invalid Persisted Block");
+                    }
+                }
+            }
 
             if (!isOracle)
             {
@@ -245,32 +266,6 @@ namespace Bizanc.io.Matching.Core.Domain
                 await AppendWithdraw(withdraw);
 
             ProcessBlocks();
-
-            if (!persistState)
-            {
-                synching = true;
-
-                var lDeposits = await depositRepository.List();
-                while (await lDeposits.WaitToReadAsync())
-                {
-                    var dp = await lDeposits.ReadAsync();
-                    await chain.Append(dp);
-                }
-
-                var blocks = await blockRepository.Get(0);
-                while (await blocks.Reader.WaitToReadAsync())
-                {
-                    var block = await blocks.Reader.ReadAsync();
-                    block.BuildDictionary();
-                    if (await ProcessBlock(block))
-                        chain.Persisted = true;
-                    else
-                    {
-                        Log.Error("Failed to process synched block: " + block.Hash);
-                        throw new Exception("Invalid Persisted Block");
-                    }
-                }
-            }
 
             if (!isOracle)
                 ProcessMining();
@@ -521,7 +516,7 @@ namespace Bizanc.io.Matching.Core.Domain
             var persistPoint = c.Cleanup();
 
             if (persistState && persistPoint != null && persistPoint.CurrentBlock != null && ((persistPoint.CurrentBlock.Header.Depth - 1) % persistStateInterval == 0) &&
-                (chain.CurrentBlock.Header.Depth - persistPoint.CurrentBlock.Header.Depth <= persistStateInterval) )
+                (chain.CurrentBlock.Header.Depth - persistPoint.CurrentBlock.Header.Depth <= persistStateInterval))
             {
                 Log.Debug("Persisting and cleanup from depth " + persistPoint.CurrentBlock.Header.Depth);
 
