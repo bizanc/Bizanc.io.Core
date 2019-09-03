@@ -520,7 +520,8 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             var persistPoint = c.Cleanup();
 
-            if (persistState && persistPoint != null && persistPoint.CurrentBlock != null && ((persistPoint.CurrentBlock.Header.Depth - 1) % persistStateInterval == 0))
+            if (persistState && persistPoint != null && persistPoint.CurrentBlock != null && ((persistPoint.CurrentBlock.Header.Depth - 1) % persistStateInterval == 0) &&
+                (chain.CurrentBlock.Header.Depth - persistPoint.CurrentBlock.Header.Depth <= persistStateInterval) )
             {
                 Log.Debug("Persisting and cleanup from depth " + persistPoint.CurrentBlock.Header.Depth);
 
@@ -800,7 +801,8 @@ namespace Bizanc.io.Matching.Core.Domain
                     var chainData = pChain.Get(40);
                     if (chainData != null && !chainData.Persisted)
                     {
-                        if (persistState && ((chainData.CurrentBlock.Header.Depth % persistStateInterval) == 0) && chainData.CurrentBlock.PreviousHashStr != "")
+                        if (persistState && ((chainData.CurrentBlock.Header.Depth % persistStateInterval) == 0) &&
+                                    (chain.CurrentBlock.Header.Depth - chainData.CurrentBlock.Header.Depth <= persistStateInterval) && chainData.CurrentBlock.PreviousHashStr != "")
                         {
                             await balanceRepository.Save(chainData.TransactManager.Balance);
                             await bookRepository.Save(chainData.BookManager);
@@ -823,7 +825,8 @@ namespace Bizanc.io.Matching.Core.Domain
 
                         await depositRepository.Save(chainData.CurrentBlock.Deposits);
 
-                        if (persistState && ((chainData.CurrentBlock.Header.Depth % persistStateInterval) == 0) && chainData.CurrentBlock.PreviousHashStr != "")
+                        if (persistState && ((chainData.CurrentBlock.Header.Depth % persistStateInterval) == 0) &&
+                            (chain.CurrentBlock.Header.Depth - chainData.CurrentBlock.Header.Depth <= persistStateInterval) && chainData.CurrentBlock.PreviousHashStr != "")
                             await blockRepository.SavePersistInfo(new BlockPersistInfo() { BlockHash = chainData.CurrentBlock.HashStr, TimeStamp = DateTime.Now });
                         retry = null;
                     }
