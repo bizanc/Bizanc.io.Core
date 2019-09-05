@@ -173,7 +173,7 @@ namespace Bizanc.io.Matching.Core.Domain
                         chain.Persisted = true;
                     else
                     {
-                        Log.Error("Failed to process synched block: " + blk.Hash);
+                        Log.Error("Failed to process synched block: " + blk.HashStr);
                         throw new Exception("Invalid Persisted Block");
                     }
                 }
