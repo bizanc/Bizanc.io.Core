@@ -1781,13 +1781,30 @@ namespace Bizanc.io.Matching.Core.Domain
             });
         }
 
-        public async Task<IList<Trade>> ListTrades(string asset, string reference, DateTime from)
+        public async Task<IList<Trade>> ListTradesAscending(string asset, string reference, DateTime from)
         {
-            var trades = await tradeRepository.List(asset, from);
-            var referenceBook = chain.GetBook(reference);
-            trades.AddRange(chain.GetTrades(asset));
+            var memTrades = chain.GetTradesAscending(asset).Where(t => t.Timestamp >= from);
+            var result = new List<Trade>();
+            var reader = tradeRepository.ListAscending(asset, from);
+            while (await reader.WaitToReadAsync())
+            {
+                var t = await reader.ReadAsync();
+                result.Add(t);
+            }
+            
+            result.AddRange(memTrades);
+            return result;
+        }
 
-            return trades.Select(t => t.Convert(referenceBook.LastPrice)).ToList();
+        public async Task<IList<Trade>> ListTradesDescending(string asset, string reference, DateTime from, int max)
+        {
+            var memTrades = chain.GetTradesDescending(asset).Where(t => t.Timestamp >= from).ToList();
+            if(memTrades.Count() >= max)
+                return memTrades.Take(max).ToList();
+
+            memTrades.AddRange(await tradeRepository.ListDescending(asset, from, max - memTrades.Count));
+
+            return memTrades;
         }
 
         public async Task<List<Candle>> GetCandle(string asset, string reference, DateTime from, CandlePeriod period = CandlePeriod.minute_1)
@@ -1795,7 +1812,7 @@ namespace Bizanc.io.Matching.Core.Domain
             var candle = new Candle();
             var candles = new List<Candle>();
 
-            var trades = (await ListTrades(asset, reference, from)).OrderBy(t => t.Timestamp);
+            var trades = (await ListTradesAscending(asset, reference, from)).OrderBy(t => t.Timestamp);
 
             if (trades.Count() == 0)
                 return new List<Candle>() { candle };

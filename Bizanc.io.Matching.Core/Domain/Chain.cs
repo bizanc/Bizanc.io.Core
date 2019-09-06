@@ -254,14 +254,26 @@ namespace Bizanc.io.Matching.Core.Domain
             return result;
         }
 
-        public List<Trade> GetTrades(string asset, int count = 0)
+        public List<Trade> GetTradesAscending(string asset)
         {
             var result = new List<Trade>();
 
             if (Previous != null)
-                result.AddRange(Previous.GetTrades(asset, ++count));
+                result.AddRange(Previous.GetTradesAscending(asset));
 
             result.AddRange(BookManager.GetTrades(asset));
+
+            return result;
+        }
+
+        public List<Trade> GetTradesDescending(string asset)
+        {
+            var result = new List<Trade>();
+
+            result.AddRange(BookManager.GetTrades(asset));
+
+            if (Previous != null)
+                result.AddRange(Previous.GetTradesDescending(asset));
 
             return result;
         }
