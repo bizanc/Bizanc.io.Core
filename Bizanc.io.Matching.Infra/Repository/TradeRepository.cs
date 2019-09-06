@@ -11,13 +11,13 @@ namespace Bizanc.io.Matching.Infra.Repository
 {
     public class TradeRepository : BaseRepository<Trade>, ITradeRepository
     {
-        public ChannelReader<Trade> ListAscending(string asset, DateTime from)
+        public async Task<ChannelReader<Trade>> ListAscending(string asset, DateTime from)
         {
             using (var s = Store.OpenAsyncSession())
             {
                 var query = s.Query<Trade>().Where(t => t.Asset == asset && t.Timestamp >= from).OrderBy(t => t.Timestamp);
                 var channel = Channel.CreateUnbounded<Trade>();
-                Stream(s, query, channel);
+                await StreamResult(s, query, channel);
                 return channel.Reader;
             }
         }

@@ -1785,7 +1785,7 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             var memTrades = chain.GetTradesAscending(asset).Where(t => t.Timestamp >= from);
             var result = new List<Trade>();
-            var reader = tradeRepository.ListAscending(asset, from);
+            var reader = await tradeRepository.ListAscending(asset, from);
             while (await reader.WaitToReadAsync())
             {
                 var t = await reader.ReadAsync();

@@ -68,10 +68,5 @@ namespace Bizanc.io.Matching.Infra.Repository
 
             result.Writer.Complete();
         }
-
-        public async void Stream(IAsyncDocumentSession session, IQueryable<T> query, Channel<T> result)
-        {
-            await StreamResult(session, query, result);
-        }
     }
 }
