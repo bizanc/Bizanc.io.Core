@@ -151,7 +151,8 @@ namespace Bizanc.io.Matching.Api.Controllers
                 wd.Size = model.Size;
                 wd.Signature = model.Signature;
                 wd.TimeStampTicks = model.Timestamp;
-
+                wd.OracleAdrress = model.OracleAddress;
+                wd.OracleFee = model.OracleFee;
                 wd.BuildHash();
 
                 return await repository.AppendWithdrawal(wd);

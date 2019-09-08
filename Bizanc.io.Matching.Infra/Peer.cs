@@ -150,17 +150,24 @@ namespace Bizanc.io.Matching.Infra
 
         public bool Equal(string address)
         {
-            if (cancellationToken.IsCancellationRequested)
+            try
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    return false;
+
+                var values = address.Split(':');
+                var port = values[values.Length - 1];
+                var ip = address.Substring(0, address.Length - port.Length - 1);
+
+                var ipad = IPAddress.Parse(ip).MapToIPv4();
+
+                var endpoint = (IPEndPoint)client.Client.RemoteEndPoint;
+                return endpoint.Address.MapToIPv4().Equals(ipad);
+            }
+            catch
+            {
                 return false;
-
-            var values = address.Split(':');
-            var port = values[values.Length - 1];
-            var ip = address.Substring(0, address.Length - port.Length - 1);
-
-            var ipad = IPAddress.Parse(ip).MapToIPv4();
-
-            var endpoint = (IPEndPoint)client.Client.RemoteEndPoint;
-            return endpoint.Address.MapToIPv4().Equals(ipad);
+            }
         }
     }
 }

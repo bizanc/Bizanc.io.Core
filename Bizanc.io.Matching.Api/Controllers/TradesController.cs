@@ -31,16 +31,14 @@ namespace Bizanc.io.Matching.Api.Controllers
         /// <param name="reference">
         /// Shows the price and candles (volume, high, low) by reference asset 
         /// </param>
+        /// <param name="size">
+        /// Max number of trades to return
+        /// </param>
         /// <response code="200">Success</response>
         [HttpGet("{asset}/{reference}")]
-        public async Task<IList<Trade>> ListTrades([FromRoute]string asset, [FromRoute]string reference)
+        public async Task<IList<Trade>> ListTrades([FromRoute]string asset, [FromRoute]string reference,[FromQuery]int size = 10)
         {
-            var trades = await repository.ListTrades(asset, reference, DateTime.Now.AddHours(-24));
-
-            if (trades.Count > 10)
-                return trades.Skip(trades.Count - 10).Take(10).Reverse().ToList();
-
-            return trades.Reverse().ToList();
+            return await repository.ListTradesDescending(asset, reference, DateTime.Now.AddHours(-24), size);
         }
     }
 }

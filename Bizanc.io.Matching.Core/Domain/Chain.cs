@@ -190,22 +190,7 @@ namespace Bizanc.io.Matching.Core.Domain
             return result;
         }
 
-        public DateTime GetLastBlockTime()
-        {
-            if (Previous != null)
-            {
-                var result = Previous.GetLastBlockTime();
-                if (result != default(DateTime))
-                    return result;
-            }
-
-            if (CurrentBlock != null)
-                return CurrentBlock.Timestamp;
-
-            return default(DateTime);
-        }
-
-        public DateTime GetLastBlockTime(int limit, int count = 0)
+        public DateTime GetLastBlockTime(int limit = 20, int count = 0)
         {
             if (Previous != null)
             {
@@ -238,13 +223,16 @@ namespace Bizanc.io.Matching.Core.Domain
             return default(DateTime).Ticks;
         }
 
-        public long GetLastBlockDepth()
+        public long GetLastBlockDepth(int limit = 20, int count = 0)
         {
             if (Previous != null)
             {
-                var result = Previous.GetLastBlockDepth();
-                if (result != -1)
-                    return result;
+                if (count < limit)
+                {
+                    var result = Previous.GetLastBlockDepth(limit, ++count);
+                    if (result != -1)
+                        return result;
+                }
             }
 
             if (CurrentBlock != null)
@@ -266,14 +254,26 @@ namespace Bizanc.io.Matching.Core.Domain
             return result;
         }
 
-        public List<Trade> GetTrades(string asset, int count = 0)
+        public List<Trade> GetTradesAscending(string asset)
         {
             var result = new List<Trade>();
 
             if (Previous != null)
-                result.AddRange(Previous.GetTrades(asset, ++count));
+                result.AddRange(Previous.GetTradesAscending(asset));
 
             result.AddRange(BookManager.GetTrades(asset));
+
+            return result;
+        }
+
+        public List<Trade> GetTradesDescending(string asset)
+        {
+            var result = new List<Trade>();
+
+            result.AddRange(BookManager.GetTrades(asset));
+
+            if (Previous != null)
+                result.AddRange(Previous.GetTradesDescending(asset));
 
             return result;
         }
@@ -331,6 +331,14 @@ namespace Bizanc.io.Matching.Core.Domain
 
             await Pool.Remove(tx);
             await Pool.Remove(CurrentBlock.Withdrawals);
+
+            var lastBlockTime = GetLastBlockTime();
+
+            //await Pool.Remove((await GetDepositPool()).Where(i => i.Timestamp < lastBlockTime));
+            await Pool.Remove((await GetOfferPool()).Where(i => i.Timestamp < lastBlockTime));
+            await Pool.Remove((await GetOfferCancelPool()).Where(i => i.Timestamp < lastBlockTime));
+            await Pool.Remove((await GetTransactionPool()).Where(i => i.Timestamp < lastBlockTime));
+            await Pool.Remove((await GetWithdrawalPool()).Where(i => i.Timestamp < lastBlockTime));
         }
 
         public async Task EnterCommitLock()
@@ -338,8 +346,13 @@ namespace Bizanc.io.Matching.Core.Domain
             await commitLocker.WaitAsync();
         }
 
-        public async Task<bool> Contains(Transaction tx, bool first = true)
+        public async Task<bool> Contains(Transaction tx, bool first = true, int limit = 20, int count = 0)
         {
+            if (count == limit)
+                return false;
+
+            count++;
+
             if (first && await Pool.Contains(tx))
                 return true;
 
@@ -349,7 +362,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     return true;
 
                 if (Previous != null)
-                    return await Previous.Contains(tx, false);
+                    return await Previous.Contains(tx, false, limit, count);
             }
 
             return false;
@@ -395,15 +408,20 @@ namespace Bizanc.io.Matching.Core.Domain
             return false;
         }
 
-        public bool Contains(Block block)
+        public bool Contains(Block block, int limit = 20, int count = 0)
         {
+            if (count == limit)
+                return false;
+
+            count++;
+
             if (CurrentBlock != null)
             {
                 if (CurrentBlock.HashStr == block.HashStr)
                     return true;
 
                 if (Previous != null)
-                    return Previous.Contains(block);
+                    return Previous.Contains(block, limit, count);
             }
 
             return false;
@@ -482,8 +500,13 @@ namespace Bizanc.io.Matching.Core.Domain
             return null;
         }
 
-        public async Task<bool> Contains(Deposit dp, bool first = true)
+        public async Task<bool> Contains(Deposit dp, bool first = true, int limit = 20, int count = 0)
         {
+            if (count == limit)
+                return false;
+
+            count++;
+
             if (first && await Pool.Contains(dp))
                 return true;
 
@@ -493,14 +516,19 @@ namespace Bizanc.io.Matching.Core.Domain
                     return true;
 
                 if (Previous != null)
-                    return await Previous.Contains(dp, false);
+                    return await Previous.Contains(dp, false, limit, count);
             }
 
             return false;
         }
 
-        public async Task<bool> Contains(Offer of, bool first = true)
+        public async Task<bool> Contains(Offer of, bool first = true, int limit = 20, int count = 0)
         {
+            if (count == limit)
+                return false;
+
+            count++;
+
             if (first && (await Pool.Contains(of) || BookManager.ContainsOffer(of)))
                 return true;
 
@@ -510,14 +538,19 @@ namespace Bizanc.io.Matching.Core.Domain
                     return true;
 
                 if (Previous != null)
-                    return await Previous.Contains(of, false);
+                    return await Previous.Contains(of, false, limit, count);
             }
 
             return false;
         }
 
-        public async Task<bool> Contains(OfferCancel of, bool first = true)
+        public async Task<bool> Contains(OfferCancel of, bool first = true, int limit = 20, int count = 0)
         {
+            if (count == limit)
+                return false;
+
+            count++;
+
             if (first && await Pool.Contains(of))
                 return true;
 
@@ -527,15 +560,20 @@ namespace Bizanc.io.Matching.Core.Domain
                     return true;
 
                 if (Previous != null)
-                    return await Previous.Contains(of, false);
+                    return await Previous.Contains(of, false, limit, count);
             }
 
             return false;
         }
 
 
-        public async Task<bool> Contains(Withdrawal wd, bool first = true)
+        public async Task<bool> Contains(Withdrawal wd, bool first = true, int limit = 20, int count = 0)
         {
+            if (count == limit)
+                return false;
+
+            count++;
+
             if (first && await Pool.Contains(wd))
                 return true;
 
@@ -545,7 +583,7 @@ namespace Bizanc.io.Matching.Core.Domain
                     return true;
 
                 if (Previous != null)
-                    return await Previous.Contains(wd, false);
+                    return await Previous.Contains(wd, false, limit, count);
             }
 
             return false;
@@ -680,12 +718,13 @@ namespace Bizanc.io.Matching.Core.Domain
                 var foundHash = false;
 
                 var tasks = new Task[threads];
-                
+
                 for (int j = 0; j < threads; j++)
                 {
                     var tStart = batch * j;
                     tasks[j] = Task.Factory.StartNew(() =>
-                    {   using (var algorithm = SHA256.Create())
+                    {
+                        using (var algorithm = SHA256.Create())
                         {
                             var i = 0;
                             while (!cancel.IsCancellationRequested && !foundHash)
@@ -840,9 +879,9 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private int GetTargetDiff()
         {
-            var lastDeth = this.GetLastBlockDepth();
+            var lastDeth = this.GetLastBlockDepth(22);
             var targetDiff = CurrentBlock.Header.Difficult;
-            if (CurrentBlock != null && (CurrentBlock.Header.Depth - 20) >= lastDeth)
+            if (CurrentBlock != null && CurrentBlock.Header.Depth != 3863 && (CurrentBlock.Header.Depth - 20) >= lastDeth)
             {
                 var frame = (CurrentBlock.Timestamp - this.GetLastBlockTime(20));
                 var avg = frame.TotalSeconds / 20;
