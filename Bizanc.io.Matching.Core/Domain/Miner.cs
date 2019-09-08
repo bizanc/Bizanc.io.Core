@@ -149,7 +149,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
             Block block = null;
 
-            if(persistPoint != null)
+            if (persistPoint != null)
                 block = await blockRepository.Get(persistPoint.BlockHash);
 
             if (block == null || !persistState)
@@ -177,6 +177,7 @@ namespace Bizanc.io.Matching.Core.Domain
                         throw new Exception("Invalid Persisted Block");
                     }
                 }
+                synching = false;
             }
             else
             {
@@ -1574,11 +1575,25 @@ namespace Bizanc.io.Matching.Core.Domain
                 return false;
             }
 
+            if (wd.OracleAdrress != "2un31o6s8ZGp42ye26TZU4diPH8CDC1dwhVvfs89XsZ35nLEZw")
+            {
+                Log.Error("Received withdraw with invalid oracle address");
+                Log.Error(wd.ToString());
+                return false;
+            }
+
             if (wd.Asset == "BTC")
             {
                 if (!CryptoHelper.IsValidBitcoinAddress(wd.TargetWallet))
                 {
                     Log.Error("!!! Withdrawal with invalid target wallet !!!");
+                    Log.Error(wd.ToString());
+                    return false;
+                }
+
+                if (wd.OracleFee != 0.001m)
+                {
+                    Log.Error("!!! Withdrawal with invalid fee value !!!");
                     Log.Error(wd.ToString());
                     return false;
                 }
@@ -1588,6 +1603,13 @@ namespace Bizanc.io.Matching.Core.Domain
                 if (!CryptoHelper.IsValidEthereumAddress(wd.TargetWallet))
                 {
                     Log.Error("!!! Withdrawal with invalid target wallet !!!");
+                    Log.Error(wd.ToString());
+                    return false;
+                }
+
+                if (wd.OracleFee != 0.01m)
+                {
+                    Log.Error("!!! Withdrawal with invalid fee value !!!");
                     Log.Error(wd.ToString());
                     return false;
                 }
@@ -1791,7 +1813,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 var t = await reader.ReadAsync();
                 result.Add(t);
             }
-            
+
             result.AddRange(memTrades);
             return result;
         }
@@ -1799,7 +1821,7 @@ namespace Bizanc.io.Matching.Core.Domain
         public async Task<IList<Trade>> ListTradesDescending(string asset, string reference, DateTime from, int max)
         {
             var memTrades = chain.GetTradesDescending(asset).Where(t => t.Timestamp >= from).ToList();
-            if(memTrades.Count() >= max)
+            if (memTrades.Count() >= max)
                 return memTrades.Take(max).ToList();
 
             memTrades.AddRange(await tradeRepository.ListDescending(asset, from, max - memTrades.Count));

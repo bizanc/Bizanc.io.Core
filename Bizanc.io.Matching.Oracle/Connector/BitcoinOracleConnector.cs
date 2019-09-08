@@ -23,6 +23,10 @@ namespace Bizanc.io.Matching.Infra.Connector
 
         private NetworkType network;
 
+        private Dictionary<string, UTXO> usedInputs = new Dictionary<string, UTXO>();
+
+        private SemaphoreSlim locker = new SemaphoreSlim(1, 1);
+
         public BitcoinOracleConnector(string network, string endpoint, string secret)
         {
             this.network = network == "testnet" ? NetworkType.Testnet : NetworkType.Mainnet;
@@ -32,62 +36,83 @@ namespace Bizanc.io.Matching.Infra.Connector
 
         public async Task<WithdrawInfo> WithdrawBtc(string withdrawHash, string recipient, decimal amount)
         {
-            var txOperations = await client.GetUTXOsAsync(TrackedSource.Create(wallet.GetAddress()));
+            var coins = new List<UTXO>();
+            var coinsUsed = new List<UTXO>();
 
-            var coins = new List<Coin>();
-
-            foreach (var op in txOperations.Confirmed.UTXOs)
-                coins.Add(op.AsCoin());
-
-            coins.Sort(delegate (Coin x, Coin y)
+            try
             {
-                return -x.Amount.CompareTo(y.Amount);
-            });
+                await locker.WaitAsync();
 
-            var coinSum = 0m;
+                while (coinsUsed.Sum(c => c.AsCoin().Amount.ToDecimal(MoneyUnit.BTC)) < amount)
+                {
+                    var txOperations = await client.GetUTXOsAsync(TrackedSource.Create(wallet.GetAddress()));
+                    foreach (var op in txOperations.Confirmed.UTXOs)
+                    {
+                        if (!usedInputs.ContainsKey(op.TransactionHash.ToString() + op.Value.Satoshi.ToString()))
+                            coins.Add(op);
+                    }
 
-            for (int i = 0; coinSum < amount; i++)
-            {
-                coinSum += coins[i].Amount.ToDecimal(MoneyUnit.BTC);
-                if (coinSum >= amount)
-                    coins.RemoveRange(i + 1, coins.Count - (i + 1));
+                    coins.Sort(delegate (UTXO x, UTXO y)
+                    {
+                        return -x.AsCoin().Amount.CompareTo(y.AsCoin().Amount);
+                    });
+
+                    foreach (var item in coins)
+                    {
+                        if (coinsUsed.Sum(c => c.AsCoin().Amount.ToDecimal(MoneyUnit.BTC)) < amount)
+                        {
+                            coinsUsed.Add(item);
+                            usedInputs.Add(item.TransactionHash.ToString() + item.Value.Satoshi.ToString(), item);
+                        }
+                        else
+                            break;
+                    }
+
+                    if (coinsUsed.Sum(c => c.AsCoin().Amount.ToDecimal(MoneyUnit.BTC)) < amount)
+                        await Task.Delay(5000);
+                }
+
+                TransactionBuilder builder = null;
+                BitcoinPubKeyAddress destination = null;
+                if (network == NetworkType.Testnet)
+                {
+                    builder = Network.TestNet.CreateTransactionBuilder();
+                    destination = new BitcoinPubKeyAddress(recipient, Network.TestNet);
+                }
+                else
+                {
+                    builder = Network.Main.CreateTransactionBuilder();
+                    destination = new BitcoinPubKeyAddress(recipient, Network.Main);
+                }
+
+                NBitcoin.Transaction tx = builder
+                                    .AddCoins(coinsUsed.Select(c => c.AsCoin()))
+                                    .AddKeys(wallet)
+                                    .Send(destination, Money.Coins(amount))
+                                    .Send(TxNullDataTemplate.Instance.GenerateScriptPubKey(Encoding.UTF8.GetBytes(withdrawHash)), Money.Zero)
+                                    .SetChange(wallet)
+                                    .SendEstimatedFees((await client.GetFeeRateAsync(3)).FeeRate)
+                                    .BuildTransaction(sign: true);
+
+                TransactionPolicyError[] errors = null;
+                if (builder.Verify(tx, out errors))
+                {
+                    var broadcastResult = await client.BroadcastAsync(tx);
+                    broadcastResult.ToString();
+                    return new WithdrawInfo() { TxHash = tx.GetHash().ToString(), Timestamp = DateTime.Now };
+                }
+
+                if (errors != null)
+                {
+                    errors.ToString();
+                }
+
+                return null;
             }
-
-            TransactionBuilder builder = null;
-            BitcoinPubKeyAddress destination = null;
-            if (network == NetworkType.Testnet)
+            finally
             {
-                builder = Network.TestNet.CreateTransactionBuilder();
-                destination = new BitcoinPubKeyAddress(recipient, Network.TestNet);
+                locker.Release();
             }
-            else
-            {
-                builder = Network.Main.CreateTransactionBuilder();
-                destination = new BitcoinPubKeyAddress(recipient, Network.Main);
-            }
-            NBitcoin.Transaction tx = builder
-                                .AddCoins(coins)
-                                .AddKeys(wallet)
-                                .Send(destination, Money.Coins(amount))
-                                .Send(TxNullDataTemplate.Instance.GenerateScriptPubKey(Encoding.UTF8.GetBytes(withdrawHash)), Money.Zero)
-                                .SetChange(wallet)
-                                .SendFees(Money.Coins(0.0001m))
-                                .BuildTransaction(sign: true);
-
-            TransactionPolicyError[] errors = null;
-            if (builder.Verify(tx, out errors))
-            {
-                var broadcastResult = await client.BroadcastAsync(tx);
-                broadcastResult.ToString();
-                return new WithdrawInfo() { TxHash = tx.GetHash().ToString(), Timestamp = DateTime.Now };
-            }
-
-            if (errors != null)
-            {
-                errors.ToString();
-            }
-
-            return null;
         }
     }
 }
