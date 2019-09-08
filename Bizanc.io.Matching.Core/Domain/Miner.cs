@@ -27,7 +27,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
         private string Address { get { return address + ":" + listenPort; } }
 
-        private int listenPort = 5556;
+        private int listenPort;
 
         private Chain chain { get; set; }
 
@@ -103,6 +103,7 @@ namespace Bizanc.io.Matching.Core.Domain
                         ITradeRepository tradeRepository,
                         IWithdrawInfoRepository withdrawInfoRepository,
                         IConnector connector,
+                        int listenPort,
                         bool persistState = true,
                         int persistStateInterval = 1000,
                         bool persistQueryData = false,
@@ -124,6 +125,7 @@ namespace Bizanc.io.Matching.Core.Domain
             this.persistState = persistState;
             this.persistStateInterval = persistStateInterval;
             this.persistQueryData = persistQueryData;
+            this.listenPort = listenPort;
             Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.Console()
@@ -216,6 +218,8 @@ namespace Bizanc.io.Matching.Core.Domain
                         throw new Exception("Invalid Persisted Block");
                     }
                 }
+
+                synching = false;
             }
 
             if (!isOracle)
@@ -989,6 +993,9 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             if (synching)
                 await synchSource.Task;
+
+            if(peerDictionary.Count > 200)
+                return;
 
             foreach (var ad in listResponse.Peers)
             {

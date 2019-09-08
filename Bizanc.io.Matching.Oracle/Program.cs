@@ -103,7 +103,7 @@ namespace Bizanc.io.Matching.Oracle
             new BlockRepository(), new BalanceRepository(), new BookRepository(),
             new DepositRepository(), new OfferRepository(), new TransactionRepository(),
             new WithdrawalRepository(), new TradeRepository(), repository,
-            connector);
+            connector, conf.ListenPort);
 
             reader = miner.GetChainStream();
 
