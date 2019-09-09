@@ -89,6 +89,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                                     .AddCoins(coinsUsed.Select(c => c.AsCoin()))
                                     .AddKeys(wallet)
                                     .Send(destination, Money.Coins(amount))
+                                    //SCRIPT 6a2c37325a6344445a3764346231766243626d517a4a546b63767479446d6a54547572416953764753794853787a	     0.        
                                     .Send(TxNullDataTemplate.Instance.GenerateScriptPubKey(Encoding.UTF8.GetBytes(withdrawHash)), Money.Zero)
                                     .SetChange(wallet)
                                     .SendEstimatedFees((await client.GetFeeRateAsync(3)).FeeRate)
@@ -107,6 +108,11 @@ namespace Bizanc.io.Matching.Infra.Connector
                     errors.ToString();
                 }
 
+                return null;
+            }
+            catch(Exception e)
+            {
+                e.ToString();
                 return null;
             }
             finally

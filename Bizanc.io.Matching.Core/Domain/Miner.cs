@@ -1264,6 +1264,27 @@ namespace Bizanc.io.Matching.Core.Domain
                 return false;
             }
 
+            if (of.Price <= 0)
+            {
+                Log.Error("Offer with invalid Price");
+                Log.Error(of.ToString());
+                return false;
+            }
+
+            if (of.Price <= 0)
+            {
+                Log.Error("Offer with invalid Quantity");
+                Log.Error(of.ToString());
+                return false;
+            }
+
+            if (! chain.BookManager.Dictionary.ContainsKey(of.Asset) || of.Asset == "BIZ")
+            {
+                Log.Error("Offer with invalid Asset");
+                Log.Error(of.ToString());
+                return false;
+            }
+
             of.BuildHash();
 
             var append = false;
@@ -1454,7 +1475,13 @@ namespace Bizanc.io.Matching.Core.Domain
                 return false;
             }
 
-            if (tx.Outputs.Any(o => o.Size < 0))
+            if (tx.Outputs.Any(o => o.Size <= 0))
+            {
+                Log.Error("Transaction with invalid output");
+                return false;
+            }
+
+            if (tx.Outputs.Any(o => string.IsNullOrEmpty(o.Wallet)))
             {
                 Log.Error("Transaction with invalid output");
                 return false;
@@ -1467,14 +1494,20 @@ namespace Bizanc.io.Matching.Core.Domain
                 return false;
             }
 
+            if (!chain.BookManager.Dictionary.ContainsKey(tx.Asset) && tx.Asset != "BIZ")
+            {
+                Log.Error("Transaction with invalid Asset");
+                Log.Error(tx.ToString());
+                return false;
+            }
+
             tx.BuildHash();
 
             var append = false;
             try
             {
                 await commitLocker.EnterWriteLock();
-                if ((tx.Timestamp < chain.GetLastBlockTime() || tx.Timestamp > DateTime.Now.ToUniversalTime())
-                        && chain.CurrentBlock.Header.Depth != 139291 && tx.HashStr != "AdxYwtNTV3qyarHoSvZjWsbobX6zufCgsPNcK6KiaRTy") //TODO: Remove Scape
+                if (tx.Timestamp < chain.GetLastBlockTime() || tx.Timestamp > DateTime.Now.ToUniversalTime()) 
                     return false;
 
                 if (!await chain.Contains(tx) && await chain.Append(tx))
@@ -1582,9 +1615,23 @@ namespace Bizanc.io.Matching.Core.Domain
                 return false;
             }
 
-            if (wd.OracleAdrress != "2un31o6s8ZGp42ye26TZU4diPH8CDC1dwhVvfs89XsZ35nLEZw")
+            if (wd.OracleAdrress != "2un31o6s8ZGp42ye26TZU4diPH8CDC1dwhVvfs89XsZ35nLEZw") // TODO Change Oracle Address
             {
                 Log.Error("Received withdraw with invalid oracle address");
+                Log.Error(wd.ToString());
+                return false;
+            }
+
+            if (wd.Size <= 0) 
+            {
+                Log.Error("Received withdraw with invalid amount");
+                Log.Error(wd.ToString());
+                return false;
+            }
+
+            if (!chain.BookManager.Dictionary.ContainsKey(wd.Asset) || wd.Asset == "BIZ")
+            {
+                Log.Error("Withdraw with invalid Asset");
                 Log.Error(wd.ToString());
                 return false;
             }
