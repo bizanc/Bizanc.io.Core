@@ -61,7 +61,7 @@ namespace Bizanc.io.Matching.App
             new BlockRepository(), new BalanceRepository(), new BookRepository(),
             new DepositRepository(), new OfferRepository(), new TransactionRepository(),
             new WithdrawalRepository(), new TradeRepository(), new WithdrawInfoRepository(),
-            new CryptoConnector(conf.OracleETHAddres, conf.OracleBTCAddres, conf.ETHEndpoint, conf.BTCEndpoint),conf.ListenPort, 
+            new CryptoConnector(conf.OracleETHAddres, conf.OracleBTCAddres, conf.ETHEndpoint, conf.BTCEndpoint, conf.Network),conf.ListenPort, 
             conf.PersistState, conf.PersistStateInterval, conf.PersistQueryData, conf.Threads);
 
             await miner.Start(!conf.Mine, conf.MinerAddress);

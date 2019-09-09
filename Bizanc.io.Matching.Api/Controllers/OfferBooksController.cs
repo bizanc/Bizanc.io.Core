@@ -32,7 +32,7 @@ namespace Bizanc.io.Matching.Api.Controllers
         /// </param>
         /// <response code="200">Success</response>
         [HttpGet("{asset}/{reference}")]
-        public async Task<OfferBook> GetOfferBook([FromRoute]string asset, [FromRoute]string reference = "TBRL")
+        public async Task<OfferBook> GetOfferBook([FromRoute]string asset, [FromRoute]string reference = "BIZ")
         {
             return await repository.GetOfferBook(asset, reference);
         }

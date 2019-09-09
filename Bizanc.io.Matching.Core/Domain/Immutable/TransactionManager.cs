@@ -75,7 +75,7 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
                 Outputs = new List<TransactionOutput>(){
                                 new TransactionOutput{
                                     Wallet = minerWallet,
-                                    Size = 100
+                                    Size = 750
                                 }
                             }
             };

@@ -95,10 +95,13 @@ namespace Bizanc.io.Matching.Oracle
 #endif
             IConfigurationRoot configuration = builder.Build();
 
+
+
             var conf = new NodeConfig();
             configuration.GetSection("Node").Bind(conf);
+            
             repository = new WithdrawInfoRepository();
-            var connector = new CryptoConnector(conf.OracleETHAddres, conf.OracleBTCAddres, conf.ETHEndpoint, conf.BTCEndpoint);
+            var connector = new CryptoConnector(conf.OracleETHAddres, conf.OracleBTCAddres, conf.ETHEndpoint, conf.BTCEndpoint, conf.Network);
             var miner = new Miner(new PeerListener(conf.ListenPort), new WalletRepository(),
             new BlockRepository(), new BalanceRepository(), new BookRepository(),
             new DepositRepository(), new OfferRepository(), new TransactionRepository(),
