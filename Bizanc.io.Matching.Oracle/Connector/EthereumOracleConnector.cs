@@ -21,6 +21,7 @@ namespace Bizanc.io.Matching.Infra.Connector
     public class EthereumOracleConnector
     {
         private string abi = @"[ { 'constant': false, 'inputs': [ { 'name': 'destination', 'type': 'string' }, { 'name': 'token', 'type': 'address' } ], 'name': 'depositERC20', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': 'withdrawHash', 'type': 'string' }, { 'name': 'to', 'type': 'address' }, { 'name': 'origin', 'type': 'address' }, { 'name': 'value', 'type': 'uint256' }, { 'name': 'token', 'type': 'address' } ], 'name': 'withdrawERC20', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': 'withdrawHash', 'type': 'string' }, { 'name': 'to', 'type': 'address' }, { 'name': 'origin', 'type': 'address' }, { 'name': 'value', 'type': 'uint256' } ], 'name': 'withdrawEth', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': '_address', 'type': 'address' } ], 'name': 'denyAccess', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': '_address', 'type': 'address' } ], 'name': 'allowAccess', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': 'destination', 'type': 'string' } ], 'name': 'depositEth', 'outputs': [], 'payable': true, 'stateMutability': 'payable', 'type': 'function' }, { 'anonymous': false, 'inputs': [ { 'indexed': false, 'name': 'from', 'type': 'address' }, { 'indexed': false, 'name': 'destination', 'type': 'string' }, { 'indexed': false, 'name': 'amount', 'type': 'uint256' }, { 'indexed': false, 'name': 'asset', 'type': 'string' }, { 'indexed': false, 'name': 'assetId', 'type': 'address' } ], 'name': 'logDeposit', 'type': 'event' }, { 'anonymous': false, 'inputs': [ { 'indexed': false, 'name': 'withdrawHash', 'type': 'string' }, { 'indexed': false, 'name': 'to', 'type': 'address' }, { 'indexed': false, 'name': 'origin', 'type': 'address' }, { 'indexed': false, 'name': 'amount', 'type': 'uint256' }, { 'indexed': false, 'name': 'asset', 'type': 'string' }, { 'indexed': false, 'name': 'assetId', 'type': 'address' } ], 'name': 'logWithdrawal', 'type': 'event' }, { 'anonymous': false, 'inputs': [ { 'indexed': true, 'name': '_address', 'type': 'address' } ], 'name': 'AllowAccessEvent', 'type': 'event' }, { 'anonymous': false, 'inputs': [ { 'indexed': true, 'name': '_address', 'type': 'address' } ], 'name': 'DenyAccessEvent', 'type': 'event' } ]";
+
         private string contractAddress;
         private Account account;
         private Web3Geth web3;
@@ -48,7 +49,7 @@ namespace Bizanc.io.Matching.Infra.Connector
             tokenDictionary.Add("INB", "0x17aa18a4b64a55abed7fa543f2ba4e91f2dce482");
             tokenDictionary.Add("KCS", "0x039b5649a59967e3e936d7471f9c3700100ee1ab");
             tokenDictionary.Add("ELF", "0xbf2179859fc6D5BEE9Bf9158632Dc51678a4100e");
-            
+
             tokenDictionary.Add("ZRX", "0xe41d2489571d322189246dafa5ebde1f4699f498");
             tokenDictionary.Add("LINK", "0x514910771af9ca656af840dff83e8264ecf986ca");
             tokenDictionary.Add("MANA", "0x0f5d2fb29fb7d3cfee444a200298f468908cc942");
@@ -93,6 +94,13 @@ namespace Bizanc.io.Matching.Infra.Connector
                 if (tokenDictionary.ContainsKey(symbol))
                 {
                     Function withdrawERC20 = contract.GetFunction("withdrawERC20");
+                    
+                    var token = web3.Eth.GetContract(ERC20ABI, tokenDictionary[symbol]);
+                    var decimals = await token.GetFunction("decimals").CallAsync<BigInteger>();
+
+                    BigInteger value = new BigInteger(Convert.ToDouble(amount) * Math.Pow(10, double.Parse(decimals.ToString())));
+                    decimals.ToString();
+
                     Log.Warning("Sending TBRL Withdrawal...");
                     receipt = await withdrawERC20.SendTransactionAndWaitForReceiptAsync(account.Address,             // Sender
                                                                                         new HexBigInteger(900000),  // Gas
@@ -101,7 +109,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                                                                                         withdrawHash,      // WithdrawHash
                                                                                         recipient,      // Recipient
                                                                                         account.Address,   // Sender
-                                                                                        Web3Geth.Convert.ToWei(amount),
+                                                                                        value,
                                                                                         tokenDictionary[symbol]);
                 }
 
@@ -122,5 +130,228 @@ namespace Bizanc.io.Matching.Infra.Connector
 
             return null;
         }
+
+        public string ERC20ABI = @"[
+                    {
+                        'constant': true,
+                        'inputs': [],
+                        'name': 'name',
+                        'outputs': [
+                            {
+                                'name': '',
+                                'type': 'string'
+                            }
+                        ],
+                        'payable': false,
+                        'stateMutability': 'view',
+                        'type': 'function'
+                    },
+                    {
+                        'constant': false,
+                        'inputs': [
+                            {
+                                'name': '_spender',
+                                'type': 'address'
+                            },
+                            {
+                                'name': '_value',
+                                'type': 'uint256'
+                            }
+                        ],
+                        'name': 'approve',
+                        'outputs': [
+                            {
+                                'name': '',
+                                'type': 'bool'
+                            }
+                        ],
+                        'payable': false,
+                        'stateMutability': 'nonpayable',
+                        'type': 'function'
+                    },
+                    {
+                        'constant': true,
+                        'inputs': [],
+                        'name': 'totalSupply',
+                        'outputs': [
+                            {
+                                'name': '',
+                                'type': 'uint256'
+                            }
+                        ],
+                        'payable': false,
+                        'stateMutability': 'view',
+                        'type': 'function'
+                    },
+                    {
+                        'constant': false,
+                        'inputs': [
+                            {
+                                'name': '_from',
+                                'type': 'address'
+                            },
+                            {
+                                'name': '_to',
+                                'type': 'address'
+                            },
+                            {
+                                'name': '_value',
+                                'type': 'uint256'
+                            }
+                        ],
+                        'name': 'transferFrom',
+                        'outputs': [
+                            {
+                                'name': '',
+                                'type': 'bool'
+                            }
+                        ],
+                        'payable': false,
+                        'stateMutability': 'nonpayable',
+                        'type': 'function'
+                    },
+                    {
+                        'constant': true,
+                        'inputs': [],
+                        'name': 'decimals',
+                        'outputs': [
+                            {
+                                'name': '',
+                                'type': 'uint8'
+                            }
+                        ],
+                        'payable': false,
+                        'stateMutability': 'view',
+                        'type': 'function'
+                    },
+                    {
+                        'constant': true,
+                        'inputs': [
+                            {
+                                'name': '_owner',
+                                'type': 'address'
+                            }
+                        ],
+                        'name': 'balanceOf',
+                        'outputs': [
+                            {
+                                'name': 'balance',
+                                'type': 'uint256'
+                            }
+                        ],
+                        'payable': false,
+                        'stateMutability': 'view',
+                        'type': 'function'
+                    },
+                    {
+                        'constant': true,
+                        'inputs': [],
+                        'name': 'symbol',
+                        'outputs': [
+                            {
+                                'name': '',
+                                'type': 'string'
+                            }
+                        ],
+                        'payable': false,
+                        'stateMutability': 'view',
+                        'type': 'function'
+                    },
+                    {
+                        'constant': false,
+                        'inputs': [
+                            {
+                                'name': '_to',
+                                'type': 'address'
+                            },
+                            {
+                                'name': '_value',
+                                'type': 'uint256'
+                            }
+                        ],
+                        'name': 'transfer',
+                        'outputs': [
+                            {
+                                'name': '',
+                                'type': 'bool'
+                            }
+                        ],
+                        'payable': false,
+                        'stateMutability': 'nonpayable',
+                        'type': 'function'
+                    },
+                    {
+                        'constant': true,
+                        'inputs': [
+                            {
+                                'name': '_owner',
+                                'type': 'address'
+                            },
+                            {
+                                'name': '_spender',
+                                'type': 'address'
+                            }
+                        ],
+                        'name': 'allowance',
+                        'outputs': [
+                            {
+                                'name': '',
+                                'type': 'uint256'
+                            }
+                        ],
+                        'payable': false,
+                        'stateMutability': 'view',
+                        'type': 'function'
+                    },
+                    {
+                        'payable': true,
+                        'stateMutability': 'payable',
+                        'type': 'fallback'
+                    },
+                    {
+                        'anonymous': false,
+                        'inputs': [
+                            {
+                                'indexed': true,
+                                'name': 'owner',
+                                'type': 'address'
+                            },
+                            {
+                                'indexed': true,
+                                'name': 'spender',
+                                'type': 'address'
+                            },
+                            {
+                                'indexed': false,
+                                'name': 'value',
+                                'type': 'uint256'
+                            }
+                        ],
+                        'name': 'Approval',
+                        'type': 'event'
+                    },
+                    {
+                        'anonymous': false,
+                        'inputs': [
+                            {
+                                'indexed': true,
+                                'name': 'from',
+                                'type': 'address'
+                            },
+                            {
+                                'indexed': true,
+                                'name': 'to',
+                                'type': 'address'
+                            },
+                            {
+                                'indexed': false,
+                                'name': 'value',
+                                'type': 'uint256'
+                            }
+                        ],
+                        'name': 'Transfer',
+                        'type': 'event'
+                    }
+                ]";
     }
 }
