@@ -81,12 +81,21 @@ namespace Bizanc.io.Matching.Infra.Connector
         {
             Contract contract = web3.Eth.GetContract(abi, contractAddress);
             TransactionReceipt receipt = null;
+
+            if(contract == null)
+                Console.WriteLine("ContractNull");
+
+            if (contract == null)
+                Console.WriteLine("Acount null");
+
             try
             {
                 if (symbol == "ETH")
                 {
                     Function withdrawEth = contract.GetFunction("withdrawEth");
                     Log.Warning("Sending ETH Withdrawal...");
+                    if (withdrawEth == null)
+                        Console.WriteLine("Function Null");
                     receipt = await withdrawEth.SendTransactionAndWaitForReceiptAsync(account.Address,             // Sender
                                                                                         new HexBigInteger(900000),  // Gas
                                                                                         null,
