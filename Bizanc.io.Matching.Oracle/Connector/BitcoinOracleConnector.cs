@@ -15,6 +15,7 @@ using NBXplorer.Models;
 using Net.Pkcs11Interop.Common;
 using Net.Pkcs11Interop.HighLevelAPI80;
 using Serilog;
+using Nethereum.Signer;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {
@@ -149,7 +150,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                             session.Login(CKU.CKU_USER, "nodeuser:#$4567bizanc9923!~");
 
                             // Specify signing mechanism
-                            Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA_SHA256);
+                            Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA);
 
                             List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute> publicKeyAttributes = new List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute>();
                             publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_LABEL, "newBtcKey"));
@@ -165,8 +166,8 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                                 byte[] signature = session.Sign(mechanism, key, sourceData);
                                 Console.WriteLine("signature: " + signature.ToString());
-
-                                var sig = new NBitcoin.TransactionSignature(signature);
+                                var canSig = ECDSASignatureFactory.FromComponents(signature).MakeCanonical();
+                                var sig = new NBitcoin.TransactionSignature(new NBitcoin.Crypto.ECDSASignature(new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray()), new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray())));
                                 builder = builder.AddKnownSignature(pubKey, sig);
                                 Console.WriteLine("tx: " + tx);
                             }
