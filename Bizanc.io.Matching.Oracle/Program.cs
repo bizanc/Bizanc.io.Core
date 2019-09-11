@@ -16,6 +16,10 @@ using System.IO;
 using Serilog;
 using Serilog.Events;
 using System.Threading.Channels;
+using Amazon.CloudHSM;
+using SimpleBase;
+using NBitcoin;
+using Nethereum.Web3.Accounts;
 
 namespace Bizanc.io.Matching.Oracle
 {
@@ -39,11 +43,11 @@ namespace Bizanc.io.Matching.Oracle
 
         private static ChannelReader<Chain> reader;
 
-        private static async void WithdrawListener(Miner miner, CryptoConnector connector, string btcSecret, string ethSecret, NodeConfig conf)
+        private static async void WithdrawListener(Miner miner, CryptoConnector connector, NodeConfig conf)
         {
             var withdrwawalDictionary = new Dictionary<string, Withdrawal>();
-            var ethConnector = new EthereumOracleConnector(ethSecret, conf.ETHEndpoint, conf.OracleETHAddres);
-            var btcConnector = new BitcoinOracleConnector(conf.Network, conf.BTCEndpoint, btcSecret);
+            var ethConnector = new EthereumOracleConnector(conf.ETHEndpoint, conf.OracleETHAddres);
+            var btcConnector = new BitcoinOracleConnector(conf.Network, conf.BTCEndpoint);
 
             while (await reader.WaitToReadAsync())
             {
@@ -83,23 +87,32 @@ namespace Bizanc.io.Matching.Oracle
 
         async static Task Main(string[] args)
         {
+            Console.WriteLine("Starting Oracle");
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .AddCommandLine(args);
 
-#if DEBUG
-            builder = builder.AddUserSecrets<Program>();
-#else
-            builder = builder.AddAzureKeyVault("https://testnetvaultbiz.vault.azure.net/");
-#endif
+
             IConfigurationRoot configuration = builder.Build();
-
-
+            Console.WriteLine("Building Config");
 
             var conf = new NodeConfig();
             configuration.GetSection("Node").Bind(conf);
-            
+            Console.WriteLine("NodeConfig created");
+
+            // var btcConnector = new BitcoinOracleConnector(conf.Network, conf.BTCEndpoint);
+            // Console.WriteLine("BTCConnector created");
+
+            // await btcConnector.WithdrawBtc("0xabc", "1HtGPy2cHwFFy5DnQkHXzCXBYt7iGmUrzi", 0.0005m);
+            // Console.WriteLine("withdraw made");
+
+            // var ethConnector = new EthereumOracleConnector(conf.ETHEndpoint, conf.OracleETHAddres);
+            // Console.WriteLine("ETHConnector created");
+
+            // await ethConnector.WithdrawEth("0xabc", "0x6Bc94245f365C721F4285E06Bc97a5E999Cd816C", 0.0005m, "ETH");
+            // Console.WriteLine("withdraw made");
+
             repository = new WithdrawInfoRepository();
             var connector = new CryptoConnector(conf.OracleETHAddres, conf.OracleBTCAddres, conf.ETHEndpoint, conf.BTCEndpoint, conf.Network);
             var miner = new Miner(new PeerListener(conf.ListenPort), new WalletRepository(),
@@ -112,7 +125,7 @@ namespace Bizanc.io.Matching.Oracle
 
             await miner.Start(true);
 
-            WithdrawListener(miner, connector, configuration.GetValue<string>("BTCSECRET"), configuration.GetValue<string>("ETHSECRET"), conf);
+            WithdrawListener(miner, connector, conf);
 
             if (!string.IsNullOrEmpty(conf.SeedAddress) && conf.SeedPort > 0)
             {
@@ -131,3 +144,5 @@ namespace Bizanc.io.Matching.Oracle
         }
     }
 }
+
+
