@@ -168,7 +168,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                                 Console.WriteLine("signature: " + signature.ToString());
                                 var canSig = ECDSASignatureFactory.FromComponents(signature).MakeCanonical();
                                 var sig = new NBitcoin.TransactionSignature(new NBitcoin.Crypto.ECDSASignature(new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray()), new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray())));
-                                builder = builder.AddKnownSignature(pubKey, sig);
+                                builder = builder.AddKnownSignature(pubKey, sig, c.Outpoint);
                                 Console.WriteLine("tx: " + tx);
                             }
 
