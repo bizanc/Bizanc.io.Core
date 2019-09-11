@@ -7,6 +7,7 @@ using Net.Pkcs11Interop.HighLevelAPI80;
 using System.Collections.Generic;
 using System.Linq;
 using Bizanc.io.Matching.Core.Crypto;
+using System.Numerics;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {

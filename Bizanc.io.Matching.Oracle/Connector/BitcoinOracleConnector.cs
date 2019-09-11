@@ -14,6 +14,7 @@ using NBXplorer;
 using NBXplorer.Models;
 using Net.Pkcs11Interop.Common;
 using Net.Pkcs11Interop.HighLevelAPI80;
+using Serilog;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {
@@ -40,12 +41,13 @@ namespace Bizanc.io.Matching.Infra.Connector
         {
             var coins = new List<UTXO>();
             var coinsUsed = new List<UTXO>();
+            var estimatedFee = await client.GetFeeRateAsync(3);
 
             try
             {
                 await locker.WaitAsync();
 
-                while (coinsUsed.Sum(c => c.AsCoin().Amount.ToDecimal(MoneyUnit.BTC)) < amount)
+                while (coinsUsed.Sum(c => c.AsCoin().Amount.ToDecimal(MoneyUnit.BTC)) <= amount)
                 {
                     var txOperations = await client.GetUTXOsAsync(TrackedSource.Create(pubKey.GetAddress(Network.Main)));
                     foreach (var op in txOperations.Confirmed.UTXOs)
@@ -61,7 +63,7 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                     foreach (var item in coins)
                     {
-                        if (coinsUsed.Sum(c => c.AsCoin().Amount.ToDecimal(MoneyUnit.BTC)) < amount)
+                        if (coinsUsed.Sum(c => c.AsCoin().Amount.ToDecimal(MoneyUnit.BTC)) <= amount)
                         {
                             coinsUsed.Add(item);
                             usedInputs.Add(item.TransactionHash.ToString() + item.Value.Satoshi.ToString(), item);
@@ -147,7 +149,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                             session.Login(CKU.CKU_USER, "nodeuser:#$4567bizanc9923!~");
 
                             // Specify signing mechanism
-                            Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA_SHA256);
+                            Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA);
 
                             List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute> publicKeyAttributes = new List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute>();
                             publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_LABEL, "newBtcKey"));
@@ -196,8 +198,8 @@ namespace Bizanc.io.Matching.Infra.Connector
             }
             catch (Exception e)
             {
-                e.ToString();
-                return null;
+                Log.Error("Failed to send BTC Withdraw"+e.ToString());
+                throw e;
             }
             finally
             {
