@@ -172,7 +172,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                                 Console.WriteLine("tx: " + tx);
                             }
 
-                            tx = builder.BuildTransaction(false);
+                            tx = builder.BuildTransaction(true);
                             TransactionPolicyError[] errors = null;
                             if (builder.Verify(tx, out errors))
                             {
