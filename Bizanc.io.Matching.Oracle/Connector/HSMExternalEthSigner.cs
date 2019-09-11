@@ -93,9 +93,10 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                         Net.Pkcs11Interop.HighLevelAPI.IObjectHandle key = session.FindAllObjects(publicKeyAttributes).FirstOrDefault();
 
-                        byte[] signature = session.Sign(mechanism, key, bytes);
-                        Console.WriteLine("signature: " + signature.ToString());
 
+                        byte[] signature = session.Sign(mechanism, key, bytes);
+                        Console.WriteLine("signature: " + BitConverter.ToString(signature));
+                        Console.WriteLine("signature formated: " + ECDSASignatureFactory.FromComponents(signature).MakeCanonical());
                         session.Logout();
 
                         return await Task.FromResult(ECDSASignatureFactory.FromComponents(signature).MakeCanonical());
