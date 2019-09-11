@@ -98,7 +98,7 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                         session.Logout();
 
-                        return await Task.FromResult(new ECDSASignature(signature));
+                        return await Task.FromResult(ECDSASignatureFactory.FromComponents(signature).MakeCanonical());
                     }
                 }
             }
