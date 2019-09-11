@@ -16,6 +16,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Serilog;
 using Nethereum.RPC.Accounts;
+using Nethereum.RPC.NonceServices;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {
@@ -32,8 +33,12 @@ namespace Bizanc.io.Matching.Infra.Connector
         public EthereumOracleConnector(string endpoint, string contractAddress)
         {
             this.contractAddress = contractAddress;
-            account = new ExternalAccount(new HSMExternalEthSigner());
-            web3 = new Web3Geth(account, endpoint,null, null);
+            var client = new Nethereum.JsonRpc.Client.RpcClient(new Uri(endpoint));
+            ExternalAccount account = new ExternalAccount("0x0147059dfda73109414014E939bFbc69C791FD18", new HSMExternalEthSigner(), 1);
+            account.NonceService = new InMemoryNonceService("0x0147059dfda73109414014E939bFbc69C791FD18", client);
+            account.InitialiseDefaultTransactionManager(client);
+
+            web3 = new Web3Geth(account, endpoint);
             contract = web3.Eth.GetContract(abi, contractAddress);
 
             tokenDictionary.Add("USDT", "0xdac17f958d2ee523a2206206994597c13d831ec7");

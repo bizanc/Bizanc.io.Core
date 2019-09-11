@@ -100,6 +100,9 @@ namespace Bizanc.io.Matching.Oracle
             var conf = new NodeConfig();
             configuration.GetSection("Node").Bind(conf);
             Console.WriteLine("NodeConfig created");
+            
+            
+            //new EthereumOracleConnector(conf.ETHEndpoint, conf.OracleETHAddres);
 
             // var btcConnector = new BitcoinOracleConnector(conf.Network, conf.BTCEndpoint);
             // Console.WriteLine("BTCConnector created");
