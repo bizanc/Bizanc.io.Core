@@ -27,7 +27,7 @@ namespace Bizanc.io.Matching.Infra.Connector
 
         protected override async Task<byte[]> GetPublicKeyAsync()
         {
-            return await Task.FromResult(CryptoHelper.StringToByteArray("0d701643c7c8cf247e37f8f20b315f588bec69bf3d71ef4d5f53f379ef16246e0150013aee41d6b344b1313f7ac811ed3d14d3e97b647831bf52e9eb9a2a321f"));
+            return await Task.FromResult(CryptoHelper.StringToByteArray("040d701643c7c8cf247e37f8f20b315f588bec69bf3d71ef4d5f53f379ef16246e0150013aee41d6b344b1313f7ac811ed3d14d3e97b647831bf52e9eb9a2a321f"));
                                                                                                                                                     
         }
 
@@ -85,7 +85,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                         session.Login(CKU.CKU_USER, "nodeuser:#$4567bizanc9923!~");
 
                         // Specify signing mechanism
-                        Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA_SHA256);
+                        Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA);
 
                         List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute> publicKeyAttributes = new List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute>();
                         publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_LABEL, "newEthKey"));
@@ -96,7 +96,6 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                         byte[] signature = session.Sign(mechanism, key, bytes);
                         Console.WriteLine("signature: " + BitConverter.ToString(signature));
-                        Console.WriteLine("signature formated: " + ECDSASignatureFactory.FromComponents(signature).MakeCanonical());
                         session.Logout();
 
                         return await Task.FromResult(ECDSASignatureFactory.FromComponents(signature).MakeCanonical());
