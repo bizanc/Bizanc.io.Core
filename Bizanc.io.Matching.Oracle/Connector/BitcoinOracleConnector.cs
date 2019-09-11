@@ -176,6 +176,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                                 var broadcastResult = await client.BroadcastAsync(tx);
                                 broadcastResult.ToString();
                                 Console.WriteLine("broadcast: " + tx.GetHash().ToString());
+                                session.Logout();
                                 return new WithdrawInfo() { TxHash = tx.GetHash().ToString(), Timestamp = DateTime.Now };
                             }
                             else
