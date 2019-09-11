@@ -12,13 +12,13 @@ using System.Collections.Generic;
 using NBitcoin.Policy;
 using NBXplorer;
 using NBXplorer.Models;
+using Net.Pkcs11Interop.Common;
+using Net.Pkcs11Interop.HighLevelAPI80;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {
     public class BitcoinOracleConnector
     {
-        private BitcoinSecret wallet;
-
         private ExplorerClient client;
 
         private NetworkType network;
@@ -27,11 +27,13 @@ namespace Bizanc.io.Matching.Infra.Connector
 
         private SemaphoreSlim locker = new SemaphoreSlim(1, 1);
 
-        public BitcoinOracleConnector(string network, string endpoint, string secret)
+        private NBitcoin.PubKey pubKey;
+
+        public BitcoinOracleConnector(string network, string endpoint)
         {
             this.network = network == "testnet" ? NetworkType.Testnet : NetworkType.Mainnet;
             client = new ExplorerClient(new NBXplorerNetworkProvider(this.network).GetBTC(), new Uri(endpoint));
-            wallet = new BitcoinSecret(secret);
+            pubKey = new NBitcoin.PubKey("04c37e0df81851f99775c0f223e2aa1f6e0ebeae7d63b6942ff5c8c01114a3eb13f2d0f3dafbc950898327bf1bd3d933b6ab1d48332867f952875142d8c408c04a");
         }
 
         public async Task<WithdrawInfo> WithdrawBtc(string withdrawHash, string recipient, decimal amount)
@@ -45,7 +47,7 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                 while (coinsUsed.Sum(c => c.AsCoin().Amount.ToDecimal(MoneyUnit.BTC)) < amount)
                 {
-                    var txOperations = await client.GetUTXOsAsync(TrackedSource.Create(wallet.GetAddress()));
+                    var txOperations = await client.GetUTXOsAsync(TrackedSource.Create(pubKey.GetAddress(Network.Main)));
                     foreach (var op in txOperations.Confirmed.UTXOs)
                     {
                         if (!usedInputs.ContainsKey(op.TransactionHash.ToString() + op.Value.Satoshi.ToString()))
@@ -86,31 +88,112 @@ namespace Bizanc.io.Matching.Infra.Connector
                 }
 
                 NBitcoin.Transaction tx = builder
-                                    .AddCoins(coinsUsed.Select(c => c.AsCoin()))
-                                    .AddKeys(wallet)
-                                    .Send(destination, Money.Coins(amount))
-                                    //SCRIPT 6a2c37325a6344445a3764346231766243626d517a4a546b63767479446d6a54547572416953764753794853787a	     0.        
-                                    .Send(TxNullDataTemplate.Instance.GenerateScriptPubKey(Encoding.UTF8.GetBytes(withdrawHash)), Money.Zero)
-                                    .SetChange(wallet)
-                                    .SendEstimatedFees((await client.GetFeeRateAsync(3)).FeeRate)
-                                    .BuildTransaction(sign: true);
+                                        .AddCoins(coinsUsed.Select(c => c.AsCoin()/* .ScriptPubKey.ToBytes()*/))
+                                        .Send(destination, Money.Coins(amount))
+                                        .Send(TxNullDataTemplate.Instance.GenerateScriptPubKey(Encoding.UTF8.GetBytes(withdrawHash)), Money.Zero)
+                                        .SetChange(pubKey.GetAddress(Network.Main))
+                                        .SendEstimatedFees((await client.GetFeeRateAsync(3)).FeeRate)
+                                        .BuildTransaction(sign: false);
 
-                TransactionPolicyError[] errors = null;
-                if (builder.Verify(tx, out errors))
-                {
-                    var broadcastResult = await client.BroadcastAsync(tx);
-                    broadcastResult.ToString();
-                    return new WithdrawInfo() { TxHash = tx.GetHash().ToString(), Timestamp = DateTime.Now };
-                }
+                // Specify the path to unmanaged PKCS#11 library provided by the cryptographic device vendor
+                string pkcs11LibraryPath = @"/opt/cloudhsm/lib/libcloudhsm_pkcs11_standard.so";
 
-                if (errors != null)
+                // Create factories used by Pkcs11Interop library
+                Net.Pkcs11Interop.HighLevelAPI.Pkcs11InteropFactories factories = new Net.Pkcs11Interop.HighLevelAPI.Pkcs11InteropFactories();
+
+                // Load unmanaged PKCS#11 library
+                using (Net.Pkcs11Interop.HighLevelAPI.IPkcs11Library pkcs11Library = factories.Pkcs11LibraryFactory.LoadPkcs11Library(factories, pkcs11LibraryPath, AppType.MultiThreaded))
                 {
-                    errors.ToString();
+                    // Show general information about loaded library
+                    Net.Pkcs11Interop.HighLevelAPI.ILibraryInfo libraryInfo = pkcs11Library.GetInfo();
+
+                    Console.WriteLine("Library");
+                    Console.WriteLine("  Manufacturer:       " + libraryInfo.ManufacturerId);
+                    Console.WriteLine("  Description:        " + libraryInfo.LibraryDescription);
+                    Console.WriteLine("  Version:            " + libraryInfo.LibraryVersion);
+
+                    // Get list of all available slots
+                    foreach (Net.Pkcs11Interop.HighLevelAPI.ISlot slot in pkcs11Library.GetSlotList(SlotsType.WithOrWithoutTokenPresent))
+                    {
+                        // Show basic information about slot
+                        Net.Pkcs11Interop.HighLevelAPI.ISlotInfo slotInfo = slot.GetSlotInfo();
+
+                        Console.WriteLine();
+                        Console.WriteLine("Slot");
+                        Console.WriteLine("  Manufacturer:       " + slotInfo.ManufacturerId);
+                        Console.WriteLine("  Description:        " + slotInfo.SlotDescription);
+                        Console.WriteLine("  Token present:      " + slotInfo.SlotFlags.TokenPresent);
+
+                        if (slotInfo.SlotFlags.TokenPresent)
+                        {
+                            // Show basic information about token present in the slot
+                            Net.Pkcs11Interop.HighLevelAPI.ITokenInfo tokenInfo = slot.GetTokenInfo();
+
+                            Console.WriteLine("Token");
+                            Console.WriteLine("  Manufacturer:       " + tokenInfo.ManufacturerId);
+                            Console.WriteLine("  Model:              " + tokenInfo.Model);
+                            Console.WriteLine("  Serial number:      " + tokenInfo.SerialNumber);
+                            Console.WriteLine("  Label:              " + tokenInfo.Label);
+
+                            // Show list of mechanisms (algorithms) supported by the token
+                            Console.WriteLine("Supported mechanisms: ");
+                            foreach (CKM mechanism in slot.GetMechanismList())
+                                Console.WriteLine("  " + mechanism);
+
+                        }
+
+                        using (Net.Pkcs11Interop.HighLevelAPI.ISession session = slot.OpenSession(SessionType.ReadWrite))
+                        {
+                            session.Login(CKU.CKU_USER, "nodeuser:#$4567bizanc9923!~");
+
+                            // Specify signing mechanism
+                            Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA_SHA256);
+
+                            List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute> publicKeyAttributes = new List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute>();
+                            publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_LABEL, "newBtcKey"));
+                            publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_SIGN, true));
+
+
+                            Net.Pkcs11Interop.HighLevelAPI.IObjectHandle key = session.FindAllObjects(publicKeyAttributes).FirstOrDefault();
+
+                            foreach (var c in coinsUsed)
+                            {
+                                byte[] sourceData = tx.GetSignatureHash(c.AsCoin()).ToBytes();
+                                Console.WriteLine("sourceData: " + tx.ToHex());
+
+                                byte[] signature = session.Sign(mechanism, key, sourceData);
+                                Console.WriteLine("signature: " + signature.ToString());
+
+                                var sig = new NBitcoin.TransactionSignature(signature);
+                                builder = builder.AddKnownSignature(pubKey, sig);
+                                Console.WriteLine("tx: " + tx);
+                            }
+
+                            tx = builder.BuildTransaction(false);
+                            TransactionPolicyError[] errors = null;
+                            if (builder.Verify(tx, out errors))
+                            {
+                                var broadcastResult = await client.BroadcastAsync(tx);
+                                broadcastResult.ToString();
+                                Console.WriteLine("broadcast: " + tx.GetHash().ToString());
+                                return new WithdrawInfo() { TxHash = tx.GetHash().ToString(), Timestamp = DateTime.Now };
+                            }
+                            else
+                                Console.WriteLine("Verify transaction failed");
+
+                            if (errors != null)
+                            {
+                                errors.ToString();
+                            }
+
+                            session.Logout();
+                        }
+                    }
                 }
 
                 return null;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 e.ToString();
                 return null;
