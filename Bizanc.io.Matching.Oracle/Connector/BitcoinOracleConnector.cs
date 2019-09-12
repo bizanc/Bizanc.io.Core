@@ -150,7 +150,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                             session.Login(CKU.CKU_USER, "nodeuser:#$4567bizanc9923!~");
 
                             // Specify signing mechanism
-                            Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA_SHA256);
+                            Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA);
 
                             List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute> publicKeyAttributes = new List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute>();
                             publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_LABEL, "newBtcKey"));
