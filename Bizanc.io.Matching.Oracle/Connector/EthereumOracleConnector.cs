@@ -17,6 +17,8 @@ using System.Collections.Generic;
 using Serilog;
 using Nethereum.RPC.Accounts;
 using Nethereum.RPC.NonceServices;
+using RestSharp;
+using Newtonsoft.Json.Linq;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {
@@ -88,6 +90,8 @@ namespace Bizanc.io.Matching.Infra.Connector
             if (contract == null)
                 Console.WriteLine("Acount null");
 
+            var gasPrice = await GetGasPrice(TransferPriority.Average);
+
             try
             {
                 if (symbol == "ETH")
@@ -98,6 +102,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                         Console.WriteLine("Function Null");
                     receipt = await withdrawEth.SendTransactionAndWaitForReceiptAsync(account.Address,             // Sender
                                                                                         new HexBigInteger(900000),  // Gas
+                                                                                        new HexBigInteger(gasPrice),
                                                                                         null,
                                                                                         null,
                                                                                         withdrawHash,      // WithdrawHash
@@ -119,6 +124,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                     Log.Warning("Sending TBRL Withdrawal...");
                     receipt = await withdrawERC20.SendTransactionAndWaitForReceiptAsync(account.Address,             // Sender
                                                                                         new HexBigInteger(900000),  // Gas
+                                                                                        new HexBigInteger(gasPrice),
                                                                                         null,
                                                                                         null,
                                                                                         withdrawHash,      // WithdrawHash
@@ -144,6 +150,54 @@ namespace Bizanc.io.Matching.Infra.Connector
             }
 
             return null;
+        }
+
+        public enum TransferPriority
+        {
+            Low,
+            Average,
+            Fast,
+            Fastest
+        }
+
+        public async Task<BigInteger> GetGasPrice(TransferPriority priority)
+        {
+            var price = ((BigInteger)(await GetGasPriceGwei(priority) * 100000000));
+
+            if (price == 0)
+                price = (await web3.Eth.GasPrice.SendRequestAsync());
+
+            return price;
+        }
+
+        public async Task<decimal> GetGasPriceGwei(TransferPriority priority)
+        {
+            try
+            {
+                RestClient client = new RestClient("https://ethgasstation.info/");
+                var request = new RestRequest("json/ethgasAPI.json", Method.GET);
+
+                var response = await client.ExecuteGetTaskAsync(request);
+                var result = JObject.Parse(response.Content);
+
+                switch (priority)
+                {
+                    case TransferPriority.Average:
+                        return result["average"].ToObject<decimal>();
+                    case TransferPriority.Fast:
+                        return result["fast"].ToObject<decimal>();
+                    case TransferPriority.Fastest:
+                        return result["fastest"].ToObject<decimal>();
+                    case TransferPriority.Low:
+                        return result["safeLow"].ToObject<decimal>();
+                    default:
+                        return 0;
+                }
+            }
+            catch (Exception e)
+            {
+                return 0;
+            }
         }
 
         public string ERC20ABI = @"[
