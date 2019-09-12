@@ -76,9 +76,7 @@ namespace Bizanc.io.Matching.Infra.Connector
             {
                 try
                 {
-                    var tx = await client.GetTransactionsAsync(oracleAddress);
-                    var oldTx = tx.ConfirmedTransactions.Transactions;
-                    oldTx.AddRange(tx.UnconfirmedTransactions.Transactions);
+                    var oldTx = (await client.GetTransactionsAsync(oracleAddress)).ConfirmedTransactions.Transactions;
 
                     opLoaded = true;
                     int heigth = 0;
@@ -116,7 +114,8 @@ namespace Bizanc.io.Matching.Infra.Connector
                 {
                     var evt = (NewTransactionEvent)(await session.NextEventAsync(cancel));
 
-                    WaitConfirmations(evt.TransactionData.TransactionHash);
+                    if (evt.TransactionData.Confirmations > 0)
+                        WaitConfirmations(evt.TransactionData.TransactionHash);
                 }
                 catch (Exception e)
                 {

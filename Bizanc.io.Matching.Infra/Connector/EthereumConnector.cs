@@ -124,7 +124,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 }
 
                 var lastBlock = new HexBigInteger(await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync());
-                withdrawFilter = logWithdrawEvent.CreateFilterInput(parameter, BlockParameter.BlockParameterType.pending);
+                withdrawFilter = logWithdrawEvent.CreateFilterInput(parameter, new BlockParameter(lastBlock));
                 withdraws = await GetWithdraws(withdrawFilter);
                 currentBlockWithdraws = lastBlock;
             }
