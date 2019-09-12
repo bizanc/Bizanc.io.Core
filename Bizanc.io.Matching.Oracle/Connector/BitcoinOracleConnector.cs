@@ -94,7 +94,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                                         .AddCoins(coinsUsed.Select(c => c.AsCoin()/* .ScriptPubKey.ToBytes()*/))
                                         .Send(destination, Money.Coins(amount))
                                         .Send(TxNullDataTemplate.Instance.GenerateScriptPubKey(Encoding.UTF8.GetBytes(withdrawHash)), Money.Zero)
-                                        .SetChange(pubKey.GetAddress(Network.Main))
+                                        .SetChange(pubKey.GetAddress(ScriptPubKeyType.Legacy, Network.Main))
                                         .SendEstimatedFees((await client.GetFeeRateAsync(3)).FeeRate)
                                         .BuildTransaction(sign: false);
 
@@ -159,17 +159,19 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                             Net.Pkcs11Interop.HighLevelAPI.IObjectHandle key = session.FindAllObjects(publicKeyAttributes).FirstOrDefault();
 
-                            foreach (var c in coinsUsed)
+                            int i = 0;
+                            foreach (var c in tx.Inputs.AsIndexedInputs())
                             {
-                                byte[] sourceData = tx.GetSignatureHash(c.AsCoin()).ToBytes();
+                                byte[] sourceData = c.GetSignatureHash(coinsUsed[i].AsCoin()).ToBytes();
                                 Console.WriteLine("sourceData: " + tx.ToHex());
 
                                 byte[] signature = session.Sign(mechanism, key, sourceData);
                                 Console.WriteLine("signature: " + signature.ToString());
                                 var canSig = ECDSASignatureFactory.FromComponents(signature).MakeCanonical();
                                 var sig = new NBitcoin.TransactionSignature(new NBitcoin.Crypto.ECDSASignature(new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray()), new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray())));
-                                builder = builder.AddKnownSignature(pubKey, sig, c.AsCoin().Outpoint);
+                                builder = builder.AddKnownSignature(pubKey, sig, coinsUsed[i].AsCoin().Outpoint);
                                 Console.WriteLine("tx: " + tx);
+                                i++;
                             }
 
                             tx = builder.SignTransactionInPlace(tx);
@@ -201,7 +203,7 @@ namespace Bizanc.io.Matching.Infra.Connector
             }
             catch (Exception e)
             {
-                Log.Error("Failed to send BTC Withdraw"+e.ToString());
+                Log.Error("Failed to send BTC Withdraw" + e.ToString());
                 throw e;
             }
             finally
