@@ -150,7 +150,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                             session.Login(CKU.CKU_USER, "nodeuser:#$4567bizanc9923!~");
 
                             // Specify signing mechanism
-                            Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA_SHA256);
+                            Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA);
 
                             List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute> publicKeyAttributes = new List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute>();
                             publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_LABEL, "newBtcKey"));
@@ -159,7 +159,7 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                             Net.Pkcs11Interop.HighLevelAPI.IObjectHandle key = session.FindAllObjects(publicKeyAttributes).FirstOrDefault();
 
-                            int i = 0;
+                            uint i = 0;
                             foreach (var c in tx.Inputs.AsIndexedInputs())
                             {
                                 byte[] sourceData = c.GetSignatureHash(coinsUsed.First(cu => cu.Outpoint.Hash == c.PrevOut.Hash).AsCoin()).ToBytes();
@@ -170,6 +170,11 @@ namespace Bizanc.io.Matching.Infra.Connector
                                 var canSig = ECDSASignatureFactory.FromComponents(signature);
                                 var sig = new NBitcoin.TransactionSignature(new NBitcoin.Crypto.ECDSASignature(new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray()), new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray())));
                                 builder = builder.AddKnownSignature(pubKey, sig, c.PrevOut);
+                                TransactionSignature sig2 = null;
+                                if(builder.TrySignInput(tx, i ,SigHash.All, out sig2))
+                                    Console.WriteLine("Input Signed");
+                                else
+                                    Console.WriteLine("Input Not Signed");
                                 Console.WriteLine("tx: " + tx);
                                 i++;
                             }
