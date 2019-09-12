@@ -50,13 +50,13 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                 while (coinsUsed.Sum(c => c.AsCoin().Amount.ToDecimal(MoneyUnit.BTC)) <= amount)
                 {
-                    var txOperations = await client.GetUTXOsAsync(TrackedSource.Create(pubKey.GetAddress(Network.Main)));
+                    var txOperations = await client.GetUTXOsAsync(TrackedSource.Create(pubKey.GetAddress(ScriptPubKeyType.Legacy, Network.Main)));
                     foreach (var op in txOperations.Confirmed.UTXOs)
                     {
                         if (!usedInputs.ContainsKey(op.TransactionHash.ToString() + op.Value.Satoshi.ToString()))
                             coins.Add(op);
                     }
-
+    
                     coins.Sort(delegate (UTXO x, UTXO y)
                     {
                         return -x.AsCoin().Amount.CompareTo(y.AsCoin().Amount);
