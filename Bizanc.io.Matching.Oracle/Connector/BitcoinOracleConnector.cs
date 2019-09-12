@@ -200,9 +200,12 @@ namespace Bizanc.io.Matching.Infra.Connector
                             else
                                 Console.WriteLine("Verify transaction failed");
 
+
+
                             if (errors != null)
                             {
-                                errors.ToString();
+                                foreach(var e in errors)
+                                    Console.WriteLine(e.ToString());
                             }
 
                             session.Logout();
