@@ -162,7 +162,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                             int i = 0;
                             foreach (var c in tx.Inputs.AsIndexedInputs())
                             {
-                                byte[] sourceData = c.GetSignatureHash(coinsUsed[i].AsCoin()).ToBytes();
+                                byte[] sourceData = c.GetSignatureHash(coinsUsed.First(cu => cu.Outpoint.Hash == c.PrevOut.Hash).AsCoin()).ToBytes();
                                 Console.WriteLine("sourceData: " + tx.ToHex());
 
                                 byte[] signature = session.Sign(mechanism, key, sourceData);
