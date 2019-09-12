@@ -181,10 +181,10 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                                 Console.WriteLine("tx: " + tx);
                                 i++;
+
+                                tx = builder.SignTransactionInPlace(tx);
                             }
 
-
-                            tx = builder.SignTransactionInPlace(tx);
 
                             Console.WriteLine("tx: " + tx);
                             TransactionPolicyError[] errors = null;
