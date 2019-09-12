@@ -168,7 +168,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                                 byte[] signature = session.Sign(mechanism, key, sourceData);
                                 Console.WriteLine("signature: " + BitConverter.ToString(signature));
                                 var canSig = ECDSASignatureFactory.FromComponents(signature).MakeCanonical();
-                                var sig = new NBitcoin.TransactionSignature(new NBitcoin.Crypto.ECDSASignature(new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray()), new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray())), SigHash.Single);
+                                var sig = new NBitcoin.TransactionSignature(new NBitcoin.Crypto.ECDSASignature(new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray()), new NBitcoin.BouncyCastle.Math.BigInteger(canSig.S.ToByteArray())), SigHash.Single);
                                 builder = builder.AddKnownSignature(pubKey, sig, c.PrevOut);
                                 TransactionSignature sig2 = null;
                                 if (builder.TrySignInput(tx, i, SigHash.Single, out sig2))
