@@ -166,10 +166,10 @@ namespace Bizanc.io.Matching.Infra.Connector
                                 Console.WriteLine("sourceData: " + tx.ToHex());
 
                                 byte[] signature = session.Sign(mechanism, key, sourceData);
-                                Console.WriteLine("signature: " + signature.ToString());
+                                Console.WriteLine("signature: " + BitConverter.ToString(signature));
                                 var canSig = ECDSASignatureFactory.FromComponents(signature).MakeCanonical();
                                 var sig = new NBitcoin.TransactionSignature(new NBitcoin.Crypto.ECDSASignature(new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray()), new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray())));
-                                builder = builder.AddKnownSignature(pubKey, sig, coinsUsed[i].AsCoin().Outpoint);
+                                builder = builder.AddKnownSignature(pubKey, sig, coinsUsed.First(cu => cu.Outpoint.Hash == c.PrevOut.Hash).AsCoin().Outpoint);
                                 Console.WriteLine("tx: " + tx);
                                 i++;
                             }
