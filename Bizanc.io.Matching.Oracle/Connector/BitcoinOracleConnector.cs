@@ -171,10 +171,15 @@ namespace Bizanc.io.Matching.Infra.Connector
                                 var sig = new NBitcoin.TransactionSignature(new NBitcoin.Crypto.ECDSASignature(new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray()), new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray())));
                                 builder = builder.AddKnownSignature(pubKey, sig, c.PrevOut);
                                 TransactionSignature sig2 = null;
-                                if(builder.TrySignInput(tx, i ,SigHash.All, out sig2))
+                                if (builder.TrySignInput(tx, i, SigHash.All, out sig2))
+                                {
                                     Console.WriteLine("Input Signed");
+                                    Console.WriteLine(BitConverter.ToString(sig2.ToBytes()));
+                                }
                                 else
                                     Console.WriteLine("Input Not Signed");
+
+                                tx = builder.SignTransactionInPlace(tx);
                                 Console.WriteLine("tx: " + tx);
                                 i++;
                             }
