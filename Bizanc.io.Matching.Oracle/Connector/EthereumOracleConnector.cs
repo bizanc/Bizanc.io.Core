@@ -32,11 +32,11 @@ namespace Bizanc.io.Matching.Infra.Connector
         private Contract contract;
 
         private Dictionary<string, string> tokenDictionary = new Dictionary<string, string>();
-        public EthereumOracleConnector(string endpoint, string contractAddress)
+        public EthereumOracleConnector(string endpoint, string contractAddress, string pkcsUser, string key)
         {
             this.contractAddress = contractAddress;
             var client = new Nethereum.JsonRpc.Client.RpcClient(new Uri(endpoint));
-            account = new ExternalAccount("0x0147059dfda73109414014E939bFbc69C791FD18", new HSMExternalEthSigner(), 1);
+            account = new ExternalAccount("0x0147059dfda73109414014E939bFbc69C791FD18", new HSMExternalEthSigner(pkcsUser, key), 1);
             account.NonceService = new InMemoryNonceService("0x0147059dfda73109414014E939bFbc69C791FD18", client);
             account.InitialiseDefaultTransactionManager(client);
 
