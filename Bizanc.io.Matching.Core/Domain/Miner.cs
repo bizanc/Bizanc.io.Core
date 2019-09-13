@@ -163,12 +163,12 @@ namespace Bizanc.io.Matching.Core.Domain
                 while (await lDeposits.WaitToReadAsync())
                 {
                     var dp = await lDeposits.ReadAsync();
-                    await AppendDeposit(dp);
+                    await chain.Append(dp);
                 }
 
                 var (deposits, withdraws) = await connector.Start(await depositRepository.GetLastEthBlockNumber(), await withdrawInfoRepository.GetLastEthBlockNumber(), await depositRepository.GetLastBtcBlockNumber(), await withdrawInfoRepository.GetLastBtcBlockNumber());
                 foreach (var dp in deposits)
-                    await AppendDeposit(dp);
+                    await chain.Append(dp);
 
                 foreach (var wd in withdraws)
                     await AppendWithdraw(wd);
@@ -209,12 +209,12 @@ namespace Bizanc.io.Matching.Core.Domain
                 while (await lDeposits.WaitToReadAsync())
                 {
                     var dp = await lDeposits.ReadAsync();
-                    await AppendDeposit(dp);
+                    await chain.Append(dp);
                 }
 
                 var (deposits, withdraws) = await connector.Start(await depositRepository.GetLastEthBlockNumber(), await withdrawInfoRepository.GetLastEthBlockNumber(), await depositRepository.GetLastBtcBlockNumber(), await withdrawInfoRepository.GetLastBtcBlockNumber());
                 foreach (var dp in deposits)
-                    await AppendDeposit(dp);
+                    await chain.Append(dp);
 
                 foreach (var wd in withdraws)
                     await AppendWithdraw(wd);
