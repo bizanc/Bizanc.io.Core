@@ -1623,7 +1623,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 return false;
             }
 
-            if (wd.OracleAdrress != "2un31o6s8ZGp42ye26TZU4diPH8CDC1dwhVvfs89XsZ35nLEZw") // TODO Change Oracle Address
+            if (wd.OracleAdrress != "hQvqKhQYVxJFyST4abJcrxkPB8SigdNTzA2fQ7KmMp2Y7LdMb") // TODO Change Oracle Address
             {
                 Log.Error("Received withdraw with invalid oracle address");
                 Log.Error(wd.ToString());

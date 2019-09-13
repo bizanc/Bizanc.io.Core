@@ -41,7 +41,7 @@ namespace Bizanc.io.Matching.Infra.Connector
             this.hsmKey = hsmKey;
             this.network = network == "testnet" ? NetworkType.Testnet : NetworkType.Mainnet;
             client = new ExplorerClient(new NBXplorerNetworkProvider(this.network).GetBTC(), new Uri(endpoint));
-            pubKey = new NBitcoin.PubKey("04c37e0df81851f99775c0f223e2aa1f6e0ebeae7d63b6942ff5c8c01114a3eb13f2d0f3dafbc950898327bf1bd3d933b6ab1d48332867f952875142d8c408c04a");
+            pubKey = new NBitcoin.PubKey("045138d46c0e99a3b94a49551581097bae7162bdbd70dbddc580963f98b2771bbee5ecf367dfa34b2c9952269691f87153cbf2a1589c177dfd66ac6735b92f6cf7");
         }
 
         public async Task<string> WithdrawBtc(string withdrawHash, string recipient, decimal amount)
