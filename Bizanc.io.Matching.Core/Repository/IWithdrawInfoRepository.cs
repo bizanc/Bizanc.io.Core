@@ -9,10 +9,16 @@ namespace Bizanc.io.Matching.Core.Repository
     {
         Task<bool> Contains(string hashStr);
 
+        Task<bool> ContainsConfirmed(string hashStr);
+
+        Task<bool> ContainsSent(string hashStr);
+
         Task<WithdrawInfo> Get(string hashStr);
 
         Task<string> GetLastEthBlockNumber();
 
         Task<string> GetLastBtcBlockNumber();
+
+        Task<List<Withdrawal>> ListToReprocess();
     }
 }

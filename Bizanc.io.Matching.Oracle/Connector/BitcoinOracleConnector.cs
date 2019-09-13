@@ -38,7 +38,7 @@ namespace Bizanc.io.Matching.Infra.Connector
             pubKey = new NBitcoin.PubKey("04c37e0df81851f99775c0f223e2aa1f6e0ebeae7d63b6942ff5c8c01114a3eb13f2d0f3dafbc950898327bf1bd3d933b6ab1d48332867f952875142d8c408c04a");
         }
 
-        public async Task<WithdrawInfo> WithdrawBtc(string withdrawHash, string recipient, decimal amount)
+        public async Task<string> WithdrawBtc(string withdrawHash, string recipient, decimal amount)
         {
             var coins = new List<UTXO>();
             var coinsUsed = new List<UTXO>();
@@ -56,7 +56,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                         if (!usedInputs.ContainsKey(op.TransactionHash.ToString() + op.Value.Satoshi.ToString()))
                             coins.Add(op);
                     }
-    
+
                     coins.Sort(delegate (UTXO x, UTXO y)
                     {
                         return -x.AsCoin().Amount.CompareTo(y.AsCoin().Amount);
@@ -194,13 +194,11 @@ namespace Bizanc.io.Matching.Infra.Connector
                                 broadcastResult.ToString();
                                 Console.WriteLine("broadcast: " + tx.GetHash().ToString());
                                 session.Logout();
-                                return new WithdrawInfo() { TxHash = tx.GetHash().ToString(), Timestamp = DateTime.Now };
+                                return tx.GetHash().ToString();
                             }
                             else
                                 Console.WriteLine("Verify transaction failed");
-
-
-
+                                
                             if (errors != null)
                             {
                                 foreach(var e in errors)

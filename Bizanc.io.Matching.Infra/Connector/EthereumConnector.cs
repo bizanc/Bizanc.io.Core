@@ -193,6 +193,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                         withdraw.BlockNumber = d.Log.BlockNumber.HexValue;
                         withdraw.Timestamp = DateTime.Now;
                         withdraw.Asset = assetDictionary[d.Event.AssetId];
+                        withdraw.Status = WithdrawStatus.Confirmed;
                         withdraws.Add(withdraw);
                     }
                 }

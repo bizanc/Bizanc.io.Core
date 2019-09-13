@@ -79,77 +79,58 @@ namespace Bizanc.io.Matching.Infra.Connector
             tokenDictionary.Add("BNB", "0xB8c77482e45F1F44dE1745F52C74426C631bDD52");
         }
 
-        public async Task<WithdrawInfo> WithdrawEth(string withdrawHash, string recipient, decimal amount, string symbol)
+        public async Task WithdrawEth(string withdrawHash, string recipient, decimal amount, string symbol)
         {
             Contract contract = web3.Eth.GetContract(abi, contractAddress);
-            TransactionReceipt receipt = null;
 
-            if(contract == null)
+            if (contract == null)
                 Console.WriteLine("ContractNull");
 
             if (contract == null)
                 Console.WriteLine("Acount null");
 
             var gasPrice = await GetGasPrice(TransferPriority.Average);
-
-            try
+            if (symbol == "ETH")
             {
-                if (symbol == "ETH")
-                {
-                    Function withdrawEth = contract.GetFunction("withdrawEth");
-                    Log.Warning("Sending ETH Withdrawal...");
-                    if (withdrawEth == null)
-                        Console.WriteLine("Function Null");
-                    receipt = await withdrawEth.SendTransactionAndWaitForReceiptAsync(account.Address,             // Sender
-                                                                                        new HexBigInteger(900000),  // Gas
-                                                                                        new HexBigInteger(gasPrice),
-                                                                                        null,
-                                                                                        null,
-                                                                                        withdrawHash,      // WithdrawHash
-                                                                                        recipient,      // Recipient
-                                                                                        account.Address,   // Sender
-                                                                                        Web3Geth.Convert.ToWei(amount));
-                }
-                else
-                if (tokenDictionary.ContainsKey(symbol))
-                {
-                    Function withdrawERC20 = contract.GetFunction("withdrawERC20");
-                    
-                    var token = web3.Eth.GetContract(ERC20ABI, tokenDictionary[symbol]);
-                    var decimals = await token.GetFunction("decimals").CallAsync<BigInteger>();
-
-                    BigInteger value = new BigInteger(Convert.ToDouble(amount) * Math.Pow(10, double.Parse(decimals.ToString())));
-                    decimals.ToString();
-
-                    Log.Warning("Sending TBRL Withdrawal...");
-                    receipt = await withdrawERC20.SendTransactionAndWaitForReceiptAsync(account.Address,             // Sender
-                                                                                        new HexBigInteger(900000),  // Gas
-                                                                                        new HexBigInteger(gasPrice),
-                                                                                        null,
-                                                                                        null,
-                                                                                        withdrawHash,      // WithdrawHash
-                                                                                        recipient,      // Recipient
-                                                                                        account.Address,   // Sender
-                                                                                        value,
-                                                                                        tokenDictionary[symbol]);
-                }
-
-                if (receipt != null)
-                {
-                    if (receipt.HasErrors() != null && ((bool)receipt.HasErrors()))
-                        Log.Error("Withdrawal Error, Hash: " + withdrawHash);
-                    else
-                        Log.Warning("Withdrawal Success: " + withdrawHash);
-
-                    return new WithdrawInfo() { Asset = symbol, HashStr = withdrawHash, TxHash = receipt.TransactionHash, Timestamp = DateTime.Now, BlockNumber = receipt.BlockNumber.HexValue };
-                }
+                Function withdrawEth = contract.GetFunction("withdrawEth");
+                Log.Warning("Sending ETH Withdrawal...");
+                if (withdrawEth == null)
+                    Console.WriteLine("Function Null");
+                await withdrawEth.SendTransactionAsync(account.Address,             // Sender
+                                                                                    new HexBigInteger(900000),  // Gas
+                                                                                    new HexBigInteger(gasPrice),
+                                                                                    null,
+                                                                                    null,
+                                                                                    withdrawHash,      // WithdrawHash
+                                                                                    recipient,      // Recipient
+                                                                                    account.Address,   // Sender
+                                                                                    Web3Geth.Convert.ToWei(amount));
             }
-            catch (Exception e)
+            else
+            if (tokenDictionary.ContainsKey(symbol))
             {
-                Log.Error(e.ToString());
+                Function withdrawERC20 = contract.GetFunction("withdrawERC20");
+
+                var token = web3.Eth.GetContract(ERC20ABI, tokenDictionary[symbol]);
+                var decimals = await token.GetFunction("decimals").CallAsync<BigInteger>();
+
+                BigInteger value = new BigInteger(Convert.ToDouble(amount) * Math.Pow(10, double.Parse(decimals.ToString())));
+                decimals.ToString();
+
+                Log.Warning("Sending TBRL Withdrawal...");
+                await withdrawERC20.SendTransactionAsync(account.Address,             // Sender
+                                                                                    new HexBigInteger(900000),  // Gas
+                                                                                    new HexBigInteger(gasPrice),
+                                                                                    null,
+                                                                                    null,
+                                                                                    withdrawHash,      // WithdrawHash
+                                                                                    recipient,      // Recipient
+                                                                                    account.Address,   // Sender
+                                                                                    value,
+                                                                                    tokenDictionary[symbol]);
             }
 
-            return null;
+            Log.Warning("Withdrawal Sent: " + withdrawHash);
         }
 
         public enum TransferPriority

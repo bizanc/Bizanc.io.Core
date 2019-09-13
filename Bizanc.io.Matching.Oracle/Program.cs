@@ -35,6 +35,7 @@ namespace Bizanc.io.Matching.Oracle
         public string ETHEndpoint { get; set; }
         public bool Mine { get; set; }
         public string ApiEndpoint { get; set; }
+        public bool Reprocess { get; set; } = false;
     }
 
     class Program
@@ -42,6 +43,37 @@ namespace Bizanc.io.Matching.Oracle
         private static WithdrawInfoRepository repository;
 
         private static ChannelReader<Chain> reader;
+
+        private static EthereumOracleConnector ethConnector;
+
+        private static BitcoinOracleConnector btcConnector;
+
+        private static Dictionary<string, Withdrawal> withdrwawalDictionary = new Dictionary<string, Withdrawal>();
+
+        private static async Task<bool> ProcessWithdraw(Withdrawal wd)
+        {
+            WithdrawInfo result = new WithdrawInfo();
+            if (await repository.Contains(wd.HashStr))
+                result = await repository.Get(wd.HashStr);
+            else
+            {
+                result.Asset = wd.Asset;
+                result.HashStr = wd.HashStr;
+                result.Timestamp = DateTime.Now;
+                await repository.Save(result);
+            }
+
+            if (wd.Asset == "BTC")
+                result.TxHash = await btcConnector.WithdrawBtc(wd.HashStr, wd.TargetWallet, wd.Size);
+            else
+                await ethConnector.WithdrawEth(wd.HashStr, wd.TargetWallet, wd.Size, wd.Asset);
+
+            result.Status = WithdrawStatus.Sent;
+
+            withdrwawalDictionary.Add(wd.HashStr, wd);
+            await repository.Save(result);
+            return true;
+        }
 
         private static async void WithdrawListener(Miner miner, CryptoConnector connector, NodeConfig conf)
         {
@@ -52,7 +84,6 @@ namespace Bizanc.io.Matching.Oracle
             while (await reader.WaitToReadAsync())
             {
                 var chain = await reader.ReadAsync();
-                chain = chain.Get(5);
                 if (chain != null)
                 {
                     foreach (var wd in chain.CurrentBlock.Withdrawals)
@@ -60,21 +91,7 @@ namespace Bizanc.io.Matching.Oracle
                         try
                         {
                             if (!withdrwawalDictionary.ContainsKey(wd.HashStr) && !(await repository.Contains(wd.HashStr)))
-                            {
-                                WithdrawInfo result = null;
-
-                                if (wd.Asset == "BTC")
-                                    result = await btcConnector.WithdrawBtc(wd.HashStr, wd.TargetWallet, wd.Size);
-                                else
-                                    result = await ethConnector.WithdrawEth(wd.HashStr, wd.TargetWallet, wd.Size, wd.Asset);
-
-                                if (result != null)
-                                {
-                                    withdrwawalDictionary.Add(wd.HashStr, wd);
-                                    result.HashStr = wd.HashStr;
-                                    await repository.Save(result);
-                                }
-                            }
+                                await ProcessWithdraw(wd);
                         }
                         catch (Exception e)
                         {
@@ -95,26 +112,11 @@ namespace Bizanc.io.Matching.Oracle
 
 
             IConfigurationRoot configuration = builder.Build();
-            Console.WriteLine("Building Config");
+            Log.Debug("Building Config");
 
             var conf = new NodeConfig();
             configuration.GetSection("Node").Bind(conf);
-            Console.WriteLine("NodeConfig created");
-            
-            
-            //new EthereumOracleConnector(conf.ETHEndpoint, conf.OracleETHAddres);
-
-            // var btcConnector = new BitcoinOracleConnector(conf.Network, conf.BTCEndpoint);
-            // Console.WriteLine("BTCConnector created");
-
-            // await btcConnector.WithdrawBtc("0xabc", "1HtGPy2cHwFFy5DnQkHXzCXBYt7iGmUrzi", 0.0005m);
-            // Console.WriteLine("withdraw made");
-
-            // var ethConnector = new EthereumOracleConnector(conf.ETHEndpoint, conf.OracleETHAddres);
-            // Console.WriteLine("ETHConnector created");
-
-            // await ethConnector.WithdrawEth("0xabc", "0x6Bc94245f365C721F4285E06Bc97a5E999Cd816C", 0.0005m, "ETH");
-            // Console.WriteLine("withdraw made");
+            Log.Debug("NodeConfig created");
 
             repository = new WithdrawInfoRepository();
             var connector = new CryptoConnector(conf.OracleETHAddres, conf.OracleBTCAddres, conf.ETHEndpoint, conf.BTCEndpoint, conf.Network);
@@ -123,6 +125,19 @@ namespace Bizanc.io.Matching.Oracle
             new DepositRepository(), new OfferRepository(), new TransactionRepository(),
             new WithdrawalRepository(), new TradeRepository(), repository,
             connector, conf.ListenPort);
+
+            ethConnector = new EthereumOracleConnector(conf.ETHEndpoint, conf.OracleETHAddres);
+            btcConnector = new BitcoinOracleConnector(conf.Network, conf.BTCEndpoint);
+
+            if (conf.Reprocess)
+            {
+                Log.Information("Reprocessing withdraws: ");
+                foreach (var wd in await repository.ListToReprocess())
+                {
+                    Log.Information("Reprocessing withdraw: "+wd.HashStr);
+                    await ProcessWithdraw(wd);
+                }
+            }
 
             reader = miner.GetChainStream();
 
