@@ -36,8 +36,8 @@ namespace Bizanc.io.Matching.Infra.Connector
         {
             this.contractAddress = contractAddress;
             var client = new Nethereum.JsonRpc.Client.RpcClient(new Uri(endpoint));
-            account = new ExternalAccount("0x0147059dfda73109414014E939bFbc69C791FD18", new HSMExternalEthSigner(pkcsUser, key), 1);
-            account.NonceService = new InMemoryNonceService("0x0147059dfda73109414014E939bFbc69C791FD18", client);
+            account = new ExternalAccount("0x7957Db97cB19fB029968595E9325e2E5C92EAF33", new HSMExternalEthSigner(pkcsUser, key), 1);
+            account.NonceService = new InMemoryNonceService("0x7957Db97cB19fB029968595E9325e2E5C92EAF33", client);
             account.InitialiseDefaultTransactionManager(client);
 
             web3 = new Web3Geth(account, endpoint);
