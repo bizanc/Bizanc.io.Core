@@ -29,14 +29,15 @@ namespace Bizanc.io.Matching.Infra.Connector
 
         private Channel<Deposit> depositStream;
         private Channel<WithdrawInfo> withdrawStream;
-
+        private NetworkType network;
         private CancellationToken cancel;
-        public BitcoinConnector(string oracleAddress, string endpoint, Channel<Deposit> depositStream, Channel<WithdrawInfo> withdrawStream)
+        public BitcoinConnector(string oracleAddress, string endpoint, Channel<Deposit> depositStream, Channel<WithdrawInfo> withdrawStream, string  network)
         {
             this.depositStream = depositStream;
             this.withdrawStream = withdrawStream;
             this.oracleAddress = TrackedSource.Create(new BitcoinPubKeyAddress(oracleAddress));
-            client = new ExplorerClient(new NBXplorerNetworkProvider(NetworkType.Testnet).GetBTC(), new Uri(endpoint));
+            this.network = network == "testnet" ? NetworkType.Testnet : NetworkType.Mainnet;
+            client = new ExplorerClient(new NBXplorerNetworkProvider(this.network).GetBTC(), new Uri(endpoint));
             client.SetNoAuth();
         }
 
@@ -95,9 +96,9 @@ namespace Bizanc.io.Matching.Infra.Connector
                     Log.Error("Failed to load transactions");
                     Log.Error(e.ToString());
 
-                    if(opLoaded)
+                    if (opLoaded)
                         throw;
-                        
+
                     await Task.Delay(3000);
                 }
             }
@@ -208,6 +209,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 withdraw.BlockNumber = transaction.Height.ToString();
                 withdraw.Timestamp = DateTime.Now;
                 withdraw.Asset = "BTC";
+                withdraw.Status = WithdrawStatus.Confirmed;
                 lastBlockWithdraws = transaction.Height;
                 return withdraw;
             }
@@ -223,19 +225,24 @@ namespace Bizanc.io.Matching.Infra.Connector
         {
             var output = transaction.Outputs.FirstOrDefault(c => c.Value.Equals(Money.Zero));
             if (output == null)
-                throw new Exception("Transaction without integration output:  " + transaction.GetHash().ToString());
+                transaction.ToString(); //TODO: UnCOmment exception
+            //throw new Exception("Transaction without integration output:  " + transaction.GetHash().ToString());
+            else
+            {
+                try
+                {
+                    var coin = new NBitcoin.Coin(transaction, output);
+                    var script = coin.GetScriptCode().ToString();
+                    script = script.Replace("OP_RETURN ", "");
+                    return HexToString(script);
+                }
+                catch (Exception e)
+                {
+                    throw new Exception("Failed to process transaction output", e);
+                }
+            }
 
-            try
-            {
-                var coin = new NBitcoin.Coin(transaction, output);
-                var script = coin.GetScriptCode().ToString();
-                script = script.Replace("OP_RETURN ", "");
-                return HexToString(script);
-            }
-            catch (Exception e)
-            {
-                throw new Exception("Failed to process transaction output", e);
-            }
+            return "";
         }
 
         public static string HexToString(string InputText)

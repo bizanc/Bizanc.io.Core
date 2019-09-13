@@ -254,14 +254,26 @@ namespace Bizanc.io.Matching.Core.Domain
             return result;
         }
 
-        public List<Trade> GetTrades(string asset, int count = 0)
+        public List<Trade> GetTradesAscending(string asset)
         {
             var result = new List<Trade>();
 
             if (Previous != null)
-                result.AddRange(Previous.GetTrades(asset, ++count));
+                result.AddRange(Previous.GetTradesAscending(asset));
 
             result.AddRange(BookManager.GetTrades(asset));
+
+            return result;
+        }
+
+        public List<Trade> GetTradesDescending(string asset)
+        {
+            var result = new List<Trade>();
+
+            result.AddRange(BookManager.GetTrades(asset));
+
+            if (Previous != null)
+                result.AddRange(Previous.GetTradesDescending(asset));
 
             return result;
         }
@@ -294,8 +306,8 @@ namespace Bizanc.io.Matching.Core.Domain
                 Asset = "BIZ",
                 Outputs = new List<TransactionOutput>(){
                                 new TransactionOutput{
-                                    Wallet = "VMBxDa9XQbsAW67k7avuo7HcXKxz4nizetAPi4FB5Upcj3eCD",
-                                    Size = 28987200
+                                    Wallet = "y4j4EmPLy7oMBeQEdfXJJAqwWdwgpPGAxezDWNGzFqqtqjKpn", //TODO Change Pre Mining Wallet
+                                    Size = 1578960000
                                 }
                             }
             };
@@ -808,7 +820,7 @@ namespace Bizanc.io.Matching.Core.Domain
                         && String.IsNullOrEmpty(tx.Wallet)
                         && String.IsNullOrEmpty(tx.Signature)
                         && tx.Outputs.Count == 1
-                        && tx.Outputs[0].Size == 100)
+                        && tx.Outputs[0].Size == 750)
                     {
                         foundMineTransaction = true;
                         miningTransaction = tx;
@@ -909,8 +921,8 @@ namespace Bizanc.io.Matching.Core.Domain
                 Log.Debug("Genesis chain pool created");
 
                 if (block.Transactions.Count() != 1 ||
-                    block.Transactions.First().Outputs[0].Wallet != "VMBxDa9XQbsAW67k7avuo7HcXKxz4nizetAPi4FB5Upcj3eCD" ||
-                    block.Transactions.First().Outputs[0].Size != 28987200)
+                    block.Transactions.First().Outputs[0].Wallet != "y4j4EmPLy7oMBeQEdfXJJAqwWdwgpPGAxezDWNGzFqqtqjKpn" ||  //TODO Changel PreMining Wallet
+                    block.Transactions.First().Outputs[0].Size != 1578960000)
                 {
                     Log.Error("Genesis block with invalid transaction");
                     return null;
@@ -1139,8 +1151,8 @@ namespace Bizanc.io.Matching.Core.Domain
                 return false;
 
             if (block.Header.PreviousBlockHash == null && block.Transactions.Count() == 1 &&
-                    block.Transactions.First().Outputs[0].Wallet == "VMBxDa9XQbsAW67k7avuo7HcXKxz4nizetAPi4FB5Upcj3eCD" &&
-                    block.Transactions.First().Outputs[0].Size == 28987200)
+                    block.Transactions.First().Outputs[0].Wallet == "y4j4EmPLy7oMBeQEdfXJJAqwWdwgpPGAxezDWNGzFqqtqjKpn" &&  //TODO Changel PreMining Wallet
+                    block.Transactions.First().Outputs[0].Size == 1578960000)
                 return true;
 
             if (CurrentBlock != null && CurrentBlock.Header.Hash.SequenceEqual(block.Header.PreviousBlockHash))

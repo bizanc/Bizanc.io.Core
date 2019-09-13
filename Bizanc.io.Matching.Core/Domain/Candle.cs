@@ -30,10 +30,11 @@ namespace Bizanc.io.Matching.Core.Domain
     public enum CandlePeriod
     {
         minute_1 = 1,
+        minute_3 = 3,
         minute_5 = 5,
         minute_15 = 15,
         minute_30 = 30,
-        hour_1 = 60,
+        minute_60 = 60,
         hour_12 = 60 * 12,
         day_1 = 60 * 24,
         week_1 = CandlePeriod.day_1 * 7

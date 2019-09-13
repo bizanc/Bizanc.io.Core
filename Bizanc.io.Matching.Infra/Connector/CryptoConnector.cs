@@ -29,11 +29,11 @@ namespace Bizanc.io.Matching.Infra.Connector
         public ChannelReader<Deposit> GetDepositsReader() => depositStream.Reader;
         public ChannelReader<WithdrawInfo> GetWithdrawsReader() => withdrawStream.Reader;
 
-        public CryptoConnector(string oracleETHAddress, string oracleBTCAddress, string ETHEndpoint, string BTCEndpoint)
+        public CryptoConnector(string oracleETHAddress, string oracleBTCAddress, string ETHEndpoint, string BTCEndpoint, string network)
         {
             depositStream = Channel.CreateUnbounded<Deposit>();
             withdrawStream = Channel.CreateUnbounded<WithdrawInfo>();
-            btcConnector = new BitcoinConnector(oracleBTCAddress, BTCEndpoint, depositStream, withdrawStream);
+            btcConnector = new BitcoinConnector(oracleBTCAddress, BTCEndpoint, depositStream, withdrawStream, network);
             ethConnector = new EthereumConnector(oracleETHAddress, ETHEndpoint);
         }
 

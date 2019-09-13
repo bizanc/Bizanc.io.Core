@@ -11,8 +11,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.CloudHSM" Version="3.3.100.72" />
+    <PackageReference Include="AWSSDK.CloudHSMV2" Version="3.3.100.72" />
     <PackageReference Include="Microsoft.Extensions.Configuration.AzureKeyVault" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="2.2.0" />
+    <PackageReference Include="nbitcoin" Version="4.2.6" />
+    <PackageReference Include="Pkcs11Interop" Version="5.0.0" />
+    <PackageReference Include="restsharp" Version="106.6.10" />
   </ItemGroup>
 
   <PropertyGroup>
