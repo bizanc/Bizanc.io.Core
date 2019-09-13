@@ -7,6 +7,7 @@ using Net.Pkcs11Interop.HighLevelAPI80;
 using System.Collections.Generic;
 using System.Linq;
 using Bizanc.io.Matching.Core.Crypto;
+using System.Numerics;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {
@@ -85,7 +86,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                         session.Login(CKU.CKU_USER, "nodeuser:#$4567bizanc9923!~");
 
                         // Specify signing mechanism
-                        Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA_SHA256);
+                        Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA);
 
                         List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute> publicKeyAttributes = new List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute>();
                         publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_LABEL, "newEthKey"));
@@ -93,12 +94,12 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                         Net.Pkcs11Interop.HighLevelAPI.IObjectHandle key = session.FindAllObjects(publicKeyAttributes).FirstOrDefault();
 
-                        byte[] signature = session.Sign(mechanism, key, bytes);
-                        Console.WriteLine("signature: " + signature.ToString());
 
+                        byte[] signature = session.Sign(mechanism, key, bytes);
+                        Console.WriteLine("signature: " + BitConverter.ToString(signature));
                         session.Logout();
 
-                        return await Task.FromResult(new ECDSASignature(signature));
+                        return await Task.FromResult(ECDSASignatureFactory.FromComponents(signature).MakeCanonical());
                     }
                 }
             }

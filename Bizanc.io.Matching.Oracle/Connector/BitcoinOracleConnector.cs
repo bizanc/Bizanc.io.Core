@@ -14,6 +14,8 @@ using NBXplorer;
 using NBXplorer.Models;
 using Net.Pkcs11Interop.Common;
 using Net.Pkcs11Interop.HighLevelAPI80;
+using Serilog;
+using Nethereum.Signer;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {
@@ -36,18 +38,19 @@ namespace Bizanc.io.Matching.Infra.Connector
             pubKey = new NBitcoin.PubKey("04c37e0df81851f99775c0f223e2aa1f6e0ebeae7d63b6942ff5c8c01114a3eb13f2d0f3dafbc950898327bf1bd3d933b6ab1d48332867f952875142d8c408c04a");
         }
 
-        public async Task<WithdrawInfo> WithdrawBtc(string withdrawHash, string recipient, decimal amount)
+        public async Task<string> WithdrawBtc(string withdrawHash, string recipient, decimal amount)
         {
             var coins = new List<UTXO>();
             var coinsUsed = new List<UTXO>();
+            var estimatedFee = await client.GetFeeRateAsync(3);
 
             try
             {
                 await locker.WaitAsync();
 
-                while (coinsUsed.Sum(c => c.AsCoin().Amount.ToDecimal(MoneyUnit.BTC)) < amount)
+                while (coinsUsed.Sum(c => c.AsCoin().Amount.ToDecimal(MoneyUnit.BTC)) <= amount)
                 {
-                    var txOperations = await client.GetUTXOsAsync(TrackedSource.Create(pubKey.GetAddress(Network.Main)));
+                    var txOperations = await client.GetUTXOsAsync(TrackedSource.Create(pubKey.GetAddress(ScriptPubKeyType.Legacy, Network.Main)));
                     foreach (var op in txOperations.Confirmed.UTXOs)
                     {
                         if (!usedInputs.ContainsKey(op.TransactionHash.ToString() + op.Value.Satoshi.ToString()))
@@ -61,7 +64,7 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                     foreach (var item in coins)
                     {
-                        if (coinsUsed.Sum(c => c.AsCoin().Amount.ToDecimal(MoneyUnit.BTC)) < amount)
+                        if (coinsUsed.Sum(c => c.AsCoin().Amount.ToDecimal(MoneyUnit.BTC)) <= amount)
                         {
                             coinsUsed.Add(item);
                             usedInputs.Add(item.TransactionHash.ToString() + item.Value.Satoshi.ToString(), item);
@@ -91,7 +94,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                                         .AddCoins(coinsUsed.Select(c => c.AsCoin()/* .ScriptPubKey.ToBytes()*/))
                                         .Send(destination, Money.Coins(amount))
                                         .Send(TxNullDataTemplate.Instance.GenerateScriptPubKey(Encoding.UTF8.GetBytes(withdrawHash)), Money.Zero)
-                                        .SetChange(pubKey.GetAddress(Network.Main))
+                                        .SetChange(pubKey.GetAddress(ScriptPubKeyType.Legacy, Network.Main))
                                         .SendEstimatedFees((await client.GetFeeRateAsync(3)).FeeRate)
                                         .BuildTransaction(sign: false);
 
@@ -147,7 +150,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                             session.Login(CKU.CKU_USER, "nodeuser:#$4567bizanc9923!~");
 
                             // Specify signing mechanism
-                            Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA_SHA256);
+                            Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA);
 
                             List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute> publicKeyAttributes = new List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute>();
                             publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_LABEL, "newBtcKey"));
@@ -156,34 +159,50 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                             Net.Pkcs11Interop.HighLevelAPI.IObjectHandle key = session.FindAllObjects(publicKeyAttributes).FirstOrDefault();
 
-                            foreach (var c in coinsUsed)
+                            uint i = 0;
+                            foreach (var c in tx.Inputs.AsIndexedInputs())
                             {
-                                byte[] sourceData = tx.GetSignatureHash(c.AsCoin()).ToBytes();
+                                byte[] sourceData = c.GetSignatureHash(coinsUsed.First(cu => cu.Outpoint.Hash == c.PrevOut.Hash).AsCoin()).ToBytes();
                                 Console.WriteLine("sourceData: " + tx.ToHex());
 
                                 byte[] signature = session.Sign(mechanism, key, sourceData);
-                                Console.WriteLine("signature: " + signature.ToString());
+                                Console.WriteLine("signature: " + BitConverter.ToString(signature));
+                                var canSig = ECDSASignatureFactory.FromComponents(signature).MakeCanonical();
+                                var sig = new NBitcoin.TransactionSignature(new NBitcoin.Crypto.ECDSASignature(new NBitcoin.BouncyCastle.Math.BigInteger(canSig.R.ToByteArray()), new NBitcoin.BouncyCastle.Math.BigInteger(canSig.S.ToByteArray())), SigHash.Single);
+                                builder = builder.AddKnownSignature(pubKey, sig, c.PrevOut);
+                                TransactionSignature sig2 = null;
+                                if (builder.TrySignInput(tx, i, SigHash.Single, out sig2))
+                                {
+                                    Console.WriteLine("Input Signed");
+                                    Console.WriteLine(BitConverter.ToString(sig2.ToBytes()));
+                                }
+                                else
+                                    Console.WriteLine("Input Not Signed");
 
-                                var sig = new NBitcoin.TransactionSignature(signature);
-                                builder = builder.AddKnownSignature(pubKey, sig);
                                 Console.WriteLine("tx: " + tx);
+                                i++;
+
+                                tx = builder.SignTransactionInPlace(tx);
                             }
 
-                            tx = builder.BuildTransaction(false);
+
+                            Console.WriteLine("tx: " + tx);
                             TransactionPolicyError[] errors = null;
                             if (builder.Verify(tx, out errors))
                             {
                                 var broadcastResult = await client.BroadcastAsync(tx);
                                 broadcastResult.ToString();
                                 Console.WriteLine("broadcast: " + tx.GetHash().ToString());
-                                return new WithdrawInfo() { TxHash = tx.GetHash().ToString(), Timestamp = DateTime.Now };
+                                session.Logout();
+                                return tx.GetHash().ToString();
                             }
                             else
                                 Console.WriteLine("Verify transaction failed");
-
+                                
                             if (errors != null)
                             {
-                                errors.ToString();
+                                foreach(var e in errors)
+                                    Console.WriteLine(e.ToString());
                             }
 
                             session.Logout();
@@ -195,8 +214,8 @@ namespace Bizanc.io.Matching.Infra.Connector
             }
             catch (Exception e)
             {
-                e.ToString();
-                return null;
+                Log.Error("Failed to send BTC Withdraw" + e.ToString());
+                throw e;
             }
             finally
             {

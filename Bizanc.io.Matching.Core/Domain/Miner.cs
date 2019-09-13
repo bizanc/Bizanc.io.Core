@@ -198,7 +198,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
                 synching = true;
 
-                var lDeposits = await depositRepository.List(persistPoint.TimeStamp);
+                var lDeposits = await depositRepository.List(block.Header.TimeStamp);
                 while (await lDeposits.WaitToReadAsync())
                 {
                     var dp = await lDeposits.ReadAsync();
@@ -520,27 +520,29 @@ namespace Bizanc.io.Matching.Core.Domain
         private async void Cleanup(Chain c)
         {
             var persistPoint = c.Cleanup();
-
-            if (persistState && persistPoint != null && persistPoint.CurrentBlock != null && ((persistPoint.CurrentBlock.Header.Depth - 1) % persistStateInterval == 0) &&
-                (chain.CurrentBlock.Header.Depth - persistPoint.CurrentBlock.Header.Depth <= persistStateInterval))
+            if (persistPoint != null && persistPoint.CurrentBlock != null)
             {
-                Log.Debug("Persisting and cleanup from depth " + persistPoint.CurrentBlock.Header.Depth);
-
-                if (persistPoint.CurrentBlock != null && !string.IsNullOrEmpty(persistPoint.CurrentBlock.PreviousHashStr))
+                if (persistState && ((persistPoint.CurrentBlock.Header.Depth - 1) % persistStateInterval == 0) &&
+                    (chain.CurrentBlock.Header.Depth - persistPoint.CurrentBlock.Header.Depth <= persistStateInterval))
                 {
-                    Log.Information("Cleaning persist point " + persistPoint.CurrentBlock.PreviousHashStr);
-                    try
-                    {
-                        await blockRepository.CleanPersistInfo();
-                        await balanceRepository.Clean();
-                        await bookRepository.Clean();
-                    }
-                    catch (Exception e)
-                    {
-                        Log.Error("Failed to clean persist point: " + e.ToString());
-                    }
+                    Log.Debug("Persisting and cleanup from depth " + persistPoint.CurrentBlock.Header.Depth);
 
-                    Log.Information("Persist point Cleaned.");
+                    if (persistPoint.CurrentBlock != null && !string.IsNullOrEmpty(persistPoint.CurrentBlock.PreviousHashStr))
+                    {
+                        Log.Information("Cleaning persist point " + persistPoint.CurrentBlock.PreviousHashStr);
+                        try
+                        {
+                            await blockRepository.CleanPersistInfo();
+                            await balanceRepository.Clean();
+                            await bookRepository.Clean();
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error("Failed to clean persist point: " + e.ToString());
+                        }
+
+                        Log.Information("Persist point Cleaned.");
+                    }
                 }
             }
         }
@@ -580,8 +582,6 @@ namespace Bizanc.io.Matching.Core.Domain
 
                         Log.Debug("Commit ProcessMining");
                         Notify(newChain.CurrentBlock);
-                        if (hasChainListner)
-                            await chainUpdateStream.Writer.WriteAsync(newChain);
 
                         ProcessMining();
                     }
@@ -660,8 +660,6 @@ namespace Bizanc.io.Matching.Core.Domain
                             Log.Debug("Process Block cleaned old forks");
 
                             Log.Information("Block Appended");
-                            if (hasChainListner)
-                                await chainUpdateStream.Writer.WriteAsync(newChain);
                             ProcessMining();
                             return true;
                         }
@@ -720,8 +718,6 @@ namespace Bizanc.io.Matching.Core.Domain
                                 Log.Debug("Chain commited, cleanup started");
                                 Persist(fork);
                                 RemoveOldForks(fork);
-                                if (hasChainListner)
-                                    await chainUpdateStream.Writer.WriteAsync(fork);
                                 ProcessMining();
                             }
                             else
@@ -802,6 +798,9 @@ namespace Bizanc.io.Matching.Core.Domain
                     var chainData = pChain.Get(40);
                     if (chainData != null && !chainData.Persisted)
                     {
+                        if (hasChainListner)
+                            await chainUpdateStream.Writer.WriteAsync(chainData);
+
                         if (persistState && ((chainData.CurrentBlock.Header.Depth % persistStateInterval) == 0) &&
                                     (chain.CurrentBlock.Header.Depth - chainData.CurrentBlock.Header.Depth <= persistStateInterval) && chainData.CurrentBlock.PreviousHashStr != "")
                         {
@@ -994,7 +993,7 @@ namespace Bizanc.io.Matching.Core.Domain
             if (synching)
                 await synchSource.Task;
 
-            if(peerDictionary.Count > 200)
+            if (peerDictionary.Count > 200)
                 return;
 
             foreach (var ad in listResponse.Peers)
@@ -1278,7 +1277,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 return false;
             }
 
-            if (! chain.BookManager.Dictionary.ContainsKey(of.Asset) || of.Asset == "BIZ")
+            if (!chain.BookManager.Dictionary.ContainsKey(of.Asset) || of.Asset == "BIZ")
             {
                 Log.Error("Offer with invalid Asset");
                 Log.Error(of.ToString());
@@ -1392,6 +1391,15 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             if (!await withdrawInfoRepository.Contains(withdraw.HashStr))
                 await withdrawInfoRepository.Save(withdraw);
+            else if (!await withdrawInfoRepository.ContainsConfirmed(withdraw.HashStr))
+            {
+                var wd = await withdrawInfoRepository.Get(withdraw.HashStr);
+                wd.TxHash = withdraw.TxHash;
+                wd.Status = WithdrawStatus.Confirmed;
+                wd.BlockNumber = withdraw.BlockNumber;
+
+                await withdrawInfoRepository.Save(wd);
+            }
         }
 
         public async Task<Transaction> GetTransationById(string id)
@@ -1507,7 +1515,7 @@ namespace Bizanc.io.Matching.Core.Domain
             try
             {
                 await commitLocker.EnterWriteLock();
-                if (tx.Timestamp < chain.GetLastBlockTime() || tx.Timestamp > DateTime.Now.ToUniversalTime()) 
+                if (tx.Timestamp < chain.GetLastBlockTime() || tx.Timestamp > DateTime.Now.ToUniversalTime())
                     return false;
 
                 if (!await chain.Contains(tx) && await chain.Append(tx))
@@ -1622,7 +1630,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 return false;
             }
 
-            if (wd.Size <= 0) 
+            if (wd.Size <= 0)
             {
                 Log.Error("Received withdraw with invalid amount");
                 Log.Error(wd.ToString());

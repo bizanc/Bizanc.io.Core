@@ -16,6 +16,9 @@ using System.Linq;
 using System.Collections.Generic;
 using Serilog;
 using Nethereum.RPC.Accounts;
+using Nethereum.RPC.NonceServices;
+using RestSharp;
+using Newtonsoft.Json.Linq;
 
 namespace Bizanc.io.Matching.Infra.Connector
 {
@@ -24,7 +27,7 @@ namespace Bizanc.io.Matching.Infra.Connector
         private string abi = @"[ { 'constant': false, 'inputs': [ { 'name': 'destination', 'type': 'string' }, { 'name': 'token', 'type': 'address' } ], 'name': 'depositERC20', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': 'withdrawHash', 'type': 'string' }, { 'name': 'to', 'type': 'address' }, { 'name': 'origin', 'type': 'address' }, { 'name': 'value', 'type': 'uint256' }, { 'name': 'token', 'type': 'address' } ], 'name': 'withdrawERC20', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': 'withdrawHash', 'type': 'string' }, { 'name': 'to', 'type': 'address' }, { 'name': 'origin', 'type': 'address' }, { 'name': 'value', 'type': 'uint256' } ], 'name': 'withdrawEth', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': '_address', 'type': 'address' } ], 'name': 'denyAccess', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': '_address', 'type': 'address' } ], 'name': 'allowAccess', 'outputs': [], 'payable': false, 'stateMutability': 'nonpayable', 'type': 'function' }, { 'constant': false, 'inputs': [ { 'name': 'destination', 'type': 'string' } ], 'name': 'depositEth', 'outputs': [], 'payable': true, 'stateMutability': 'payable', 'type': 'function' }, { 'anonymous': false, 'inputs': [ { 'indexed': false, 'name': 'from', 'type': 'address' }, { 'indexed': false, 'name': 'destination', 'type': 'string' }, { 'indexed': false, 'name': 'amount', 'type': 'uint256' }, { 'indexed': false, 'name': 'asset', 'type': 'string' }, { 'indexed': false, 'name': 'assetId', 'type': 'address' } ], 'name': 'logDeposit', 'type': 'event' }, { 'anonymous': false, 'inputs': [ { 'indexed': false, 'name': 'withdrawHash', 'type': 'string' }, { 'indexed': false, 'name': 'to', 'type': 'address' }, { 'indexed': false, 'name': 'origin', 'type': 'address' }, { 'indexed': false, 'name': 'amount', 'type': 'uint256' }, { 'indexed': false, 'name': 'asset', 'type': 'string' }, { 'indexed': false, 'name': 'assetId', 'type': 'address' } ], 'name': 'logWithdrawal', 'type': 'event' }, { 'anonymous': false, 'inputs': [ { 'indexed': true, 'name': '_address', 'type': 'address' } ], 'name': 'AllowAccessEvent', 'type': 'event' }, { 'anonymous': false, 'inputs': [ { 'indexed': true, 'name': '_address', 'type': 'address' } ], 'name': 'DenyAccessEvent', 'type': 'event' } ]";
 
         private string contractAddress;
-        private IAccount account;
+        private ExternalAccount account;
         private Web3Geth web3;
         private Contract contract;
 
@@ -32,8 +35,12 @@ namespace Bizanc.io.Matching.Infra.Connector
         public EthereumOracleConnector(string endpoint, string contractAddress)
         {
             this.contractAddress = contractAddress;
-            account = new ExternalAccount(new HSMExternalEthSigner());
-            web3 = new Web3Geth(account, endpoint,null, null);
+            var client = new Nethereum.JsonRpc.Client.RpcClient(new Uri(endpoint));
+            account = new ExternalAccount("0x0147059dfda73109414014E939bFbc69C791FD18", new HSMExternalEthSigner(), 1);
+            account.NonceService = new InMemoryNonceService("0x0147059dfda73109414014E939bFbc69C791FD18", client);
+            account.InitialiseDefaultTransactionManager(client);
+
+            web3 = new Web3Geth(account, endpoint);
             contract = web3.Eth.GetContract(abi, contractAddress);
 
             tokenDictionary.Add("USDT", "0xdac17f958d2ee523a2206206994597c13d831ec7");
@@ -72,64 +79,109 @@ namespace Bizanc.io.Matching.Infra.Connector
             tokenDictionary.Add("BNB", "0xB8c77482e45F1F44dE1745F52C74426C631bDD52");
         }
 
-        public async Task<WithdrawInfo> WithdrawEth(string withdrawHash, string recipient, decimal amount, string symbol)
+        public async Task WithdrawEth(string withdrawHash, string recipient, decimal amount, string symbol)
         {
             Contract contract = web3.Eth.GetContract(abi, contractAddress);
-            TransactionReceipt receipt = null;
+
+            if (contract == null)
+                Console.WriteLine("ContractNull");
+
+            if (contract == null)
+                Console.WriteLine("Acount null");
+
+            var gasPrice = await GetGasPrice(TransferPriority.Fast);
+            if (symbol == "ETH")
+            {
+                Function withdrawEth = contract.GetFunction("withdrawEth");
+                Log.Warning("Sending ETH Withdrawal...");
+                if (withdrawEth == null)
+                    Console.WriteLine("Function Null");
+                await withdrawEth.SendTransactionAsync(account.Address,             // Sender
+                                                                                    new HexBigInteger(900000),  // Gas
+                                                                                    new HexBigInteger(gasPrice),
+                                                                                    null,
+                                                                                    withdrawHash,      // WithdrawHash
+                                                                                    recipient,      // Recipient
+                                                                                    account.Address,   // Sender
+                                                                                    Web3Geth.Convert.ToWei(amount));
+            }
+            else
+            if (tokenDictionary.ContainsKey(symbol))
+            {
+                Function withdrawERC20 = contract.GetFunction("withdrawERC20");
+
+                var token = web3.Eth.GetContract(ERC20ABI, tokenDictionary[symbol]);
+                var decimals = await token.GetFunction("decimals").CallAsync<BigInteger>();
+
+                var power = 1;
+
+                for (int i = 0; i < decimals; i++)
+                    power = 10 * power;
+
+                BigInteger value = new BigInteger(amount * power);
+                decimals.ToString();
+
+                Log.Warning("Sending "+symbol +" Withdrawal...");
+                await withdrawERC20.SendTransactionAsync(account.Address,             // Sender
+                                                                                    new HexBigInteger(900000),  // Gas
+                                                                                    new HexBigInteger(gasPrice),
+                                                                                    null,
+                                                                                    withdrawHash,      // WithdrawHash
+                                                                                    recipient,      // Recipient
+                                                                                    account.Address,   // Sender
+                                                                                    value,
+                                                                                    tokenDictionary[symbol]);
+            }
+
+            Log.Warning("Withdrawal Sent: " + withdrawHash);
+        }
+
+        public enum TransferPriority
+        {
+            Low,
+            Average,
+            Fast,
+            Fastest
+        }
+
+        public async Task<BigInteger> GetGasPrice(TransferPriority priority)
+        {
+            var price = ((BigInteger)(await GetGasPriceGwei(priority) * 100000000));
+
+            if (price == 0)
+                price = (await web3.Eth.GasPrice.SendRequestAsync());
+
+            return price;
+        }
+
+        public async Task<decimal> GetGasPriceGwei(TransferPriority priority)
+        {
             try
             {
-                if (symbol == "ETH")
+                RestClient client = new RestClient("https://ethgasstation.info/");
+                var request = new RestRequest("json/ethgasAPI.json", Method.GET);
+
+                var response = await client.ExecuteGetTaskAsync(request);
+                var result = JObject.Parse(response.Content);
+
+                switch (priority)
                 {
-                    Function withdrawEth = contract.GetFunction("withdrawEth");
-                    Log.Warning("Sending ETH Withdrawal...");
-                    receipt = await withdrawEth.SendTransactionAndWaitForReceiptAsync(account.Address,             // Sender
-                                                                                        new HexBigInteger(900000),  // Gas
-                                                                                        null,
-                                                                                        null,
-                                                                                        withdrawHash,      // WithdrawHash
-                                                                                        recipient,      // Recipient
-                                                                                        account.Address,   // Sender
-                                                                                        Web3Geth.Convert.ToWei(amount));
-                }
-                else
-                if (tokenDictionary.ContainsKey(symbol))
-                {
-                    Function withdrawERC20 = contract.GetFunction("withdrawERC20");
-                    
-                    var token = web3.Eth.GetContract(ERC20ABI, tokenDictionary[symbol]);
-                    var decimals = await token.GetFunction("decimals").CallAsync<BigInteger>();
-
-                    BigInteger value = new BigInteger(Convert.ToDouble(amount) * Math.Pow(10, double.Parse(decimals.ToString())));
-                    decimals.ToString();
-
-                    Log.Warning("Sending TBRL Withdrawal...");
-                    receipt = await withdrawERC20.SendTransactionAndWaitForReceiptAsync(account.Address,             // Sender
-                                                                                        new HexBigInteger(900000),  // Gas
-                                                                                        null,
-                                                                                        null,
-                                                                                        withdrawHash,      // WithdrawHash
-                                                                                        recipient,      // Recipient
-                                                                                        account.Address,   // Sender
-                                                                                        value,
-                                                                                        tokenDictionary[symbol]);
-                }
-
-                if (receipt != null)
-                {
-                    if (receipt.HasErrors() != null && ((bool)receipt.HasErrors()))
-                        Log.Error("Withdrawal Error, Hash: " + withdrawHash);
-                    else
-                        Log.Warning("Withdrawal Success: " + withdrawHash);
-
-                    return new WithdrawInfo() { Asset = symbol, HashStr = withdrawHash, TxHash = receipt.TransactionHash, Timestamp = DateTime.Now, BlockNumber = receipt.BlockNumber.HexValue };
+                    case TransferPriority.Average:
+                        return result["average"].ToObject<decimal>();
+                    case TransferPriority.Fast:
+                        return result["fast"].ToObject<decimal>();
+                    case TransferPriority.Fastest:
+                        return result["fastest"].ToObject<decimal>();
+                    case TransferPriority.Low:
+                        return result["safeLow"].ToObject<decimal>();
+                    default:
+                        return 0;
                 }
             }
             catch (Exception e)
             {
-                Log.Error(e.ToString());
+                return 0;
             }
-
-            return null;
         }
 
         public string ERC20ABI = @"[

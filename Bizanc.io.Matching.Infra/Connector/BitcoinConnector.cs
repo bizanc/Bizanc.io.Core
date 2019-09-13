@@ -209,6 +209,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 withdraw.BlockNumber = transaction.Height.ToString();
                 withdraw.Timestamp = DateTime.Now;
                 withdraw.Asset = "BTC";
+                withdraw.Status = WithdrawStatus.Confirmed;
                 lastBlockWithdraws = transaction.Height;
                 return withdraw;
             }
