@@ -125,7 +125,7 @@ namespace Bizanc.io.Matching.Oracle
             new BlockRepository(), new BalanceRepository(), new BookRepository(),
             new DepositRepository(), new OfferRepository(), new TransactionRepository(),
             wdRepository, new TradeRepository(), repository,
-            connector, conf.ListenPort);
+            connector, conf.ListenPort,true, 1000, true);
 
             ethConnector = new EthereumOracleConnector(conf.ETHEndpoint, conf.OracleETHAddres);
             btcConnector = new BitcoinOracleConnector(conf.Network, conf.BTCEndpoint);
@@ -135,8 +135,9 @@ namespace Bizanc.io.Matching.Oracle
                 Log.Information("Reprocessing withdraws: ");
                 foreach (var wdid in await repository.ListToReprocess())
                 {
+                    Log.Information("Reprocessing withdraw: " + wdid);
                     var wd = await wdRepository.Get(wdid);
-                    Log.Information("Reprocessing withdraw: "+wd.HashStr);
+                    
                     await ProcessWithdraw(wd);
                 }
             }

@@ -113,7 +113,12 @@ namespace Bizanc.io.Matching.Infra.Connector
                 var token = web3.Eth.GetContract(ERC20ABI, tokenDictionary[symbol]);
                 var decimals = await token.GetFunction("decimals").CallAsync<BigInteger>();
 
-                BigInteger value = new BigInteger(Convert.ToDouble(amount) * Math.Pow(10, double.Parse(decimals.ToString())));
+                var power = 1;
+
+                for (int i = 0; i < decimals; i++)
+                    power = 10 * power;
+
+                BigInteger value = new BigInteger(amount * power);
                 decimals.ToString();
 
                 Log.Warning("Sending "+symbol +" Withdrawal...");
