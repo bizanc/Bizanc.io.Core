@@ -166,6 +166,13 @@ namespace Bizanc.io.Matching.Core.Domain
                     await chain.Append(dp);
                 }
 
+                var (deposits, withdraws) = await connector.Start(await depositRepository.GetLastEthBlockNumber(), await withdrawInfoRepository.GetLastEthBlockNumber(), await depositRepository.GetLastBtcBlockNumber(), await withdrawInfoRepository.GetLastBtcBlockNumber());
+                foreach (var dp in deposits)
+                    await AppendDeposit(dp);
+
+                foreach (var wd in withdraws)
+                    await AppendWithdraw(wd);
+
                 var blocks = await blockRepository.Get(0);
                 while (await blocks.Reader.WaitToReadAsync())
                 {
@@ -204,6 +211,13 @@ namespace Bizanc.io.Matching.Core.Domain
                     var dp = await lDeposits.ReadAsync();
                     await chain.Append(dp);
                 }
+
+                var (deposits, withdraws) = await connector.Start(await depositRepository.GetLastEthBlockNumber(), await withdrawInfoRepository.GetLastEthBlockNumber(), await depositRepository.GetLastBtcBlockNumber(), await withdrawInfoRepository.GetLastBtcBlockNumber());
+                foreach (var dp in deposits)
+                    await AppendDeposit(dp);
+
+                foreach (var wd in withdraws)
+                    await AppendWithdraw(wd);
 
                 var blocks = await blockRepository.Get(chain.CurrentBlock.Header.Depth + 1);
                 while (await blocks.Reader.WaitToReadAsync())
@@ -262,14 +276,6 @@ namespace Bizanc.io.Matching.Core.Domain
             ProcessTransactions();
             ProcessWithdrawal();
             ProcessPersist();
-
-
-            var (deposits, withdraws) = await connector.Start(await depositRepository.GetLastEthBlockNumber(), await withdrawInfoRepository.GetLastEthBlockNumber(), await depositRepository.GetLastBtcBlockNumber(), await withdrawInfoRepository.GetLastBtcBlockNumber());
-            foreach (var deposit in deposits)
-                await AppendDeposit(deposit);
-
-            foreach (var withdraw in withdraws)
-                await AppendWithdraw(withdraw);
 
             ProcessBlocks();
 
