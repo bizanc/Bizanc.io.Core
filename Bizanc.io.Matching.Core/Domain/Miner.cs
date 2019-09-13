@@ -163,7 +163,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 while (await lDeposits.WaitToReadAsync())
                 {
                     var dp = await lDeposits.ReadAsync();
-                    await chain.Append(dp);
+                    await AppendDeposit(dp);
                 }
 
                 var (deposits, withdraws) = await connector.Start(await depositRepository.GetLastEthBlockNumber(), await withdrawInfoRepository.GetLastEthBlockNumber(), await depositRepository.GetLastBtcBlockNumber(), await withdrawInfoRepository.GetLastBtcBlockNumber());
@@ -209,7 +209,7 @@ namespace Bizanc.io.Matching.Core.Domain
                 while (await lDeposits.WaitToReadAsync())
                 {
                     var dp = await lDeposits.ReadAsync();
-                    await chain.Append(dp);
+                    await AppendDeposit(dp);
                 }
 
                 var (deposits, withdraws) = await connector.Start(await depositRepository.GetLastEthBlockNumber(), await withdrawInfoRepository.GetLastEthBlockNumber(), await depositRepository.GetLastBtcBlockNumber(), await withdrawInfoRepository.GetLastBtcBlockNumber());
@@ -228,7 +228,7 @@ namespace Bizanc.io.Matching.Core.Domain
                         chain.Persisted = true;
                     else
                     {
-                        Log.Error("Failed to process synched block: " + block.Hash);
+                        Log.Error("Failed to process synched block: " + block.HashStr);
                         throw new Exception("Invalid Persisted Block");
                     }
                 }
