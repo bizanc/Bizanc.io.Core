@@ -38,6 +38,13 @@ namespace Bizanc.io.Matching.Oracle
         public bool Reprocess { get; set; } = false;
     }
 
+    class PKCS
+    {
+        public string User { get; set; }
+        public string BtcKey { get; set; }
+        public string EthKey { get; set; }
+    }
+
     class Program
     {
         private static WithdrawInfoRepository repository;
@@ -78,8 +85,6 @@ namespace Bizanc.io.Matching.Oracle
         private static async void WithdrawListener(Miner miner, CryptoConnector connector, NodeConfig conf)
         {
             var withdrwawalDictionary = new Dictionary<string, Withdrawal>();
-            var ethConnector = new EthereumOracleConnector(conf.ETHEndpoint, conf.OracleETHAddres);
-            var btcConnector = new BitcoinOracleConnector(conf.Network, conf.BTCEndpoint);
 
             while (await reader.WaitToReadAsync())
             {
@@ -108,6 +113,7 @@ namespace Bizanc.io.Matching.Oracle
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile("pkcscfg.json", optional: false, reloadOnChange: true)
                 .AddCommandLine(args);
 
 
@@ -116,6 +122,8 @@ namespace Bizanc.io.Matching.Oracle
 
             var conf = new NodeConfig();
             configuration.GetSection("Node").Bind(conf);
+            var pkcsConf = new PKCS();
+            configuration.GetSection("PKCS").Bind(pkcsConf);
             Log.Debug("NodeConfig created");
 
             repository = new WithdrawInfoRepository();
@@ -127,8 +135,8 @@ namespace Bizanc.io.Matching.Oracle
             wdRepository, new TradeRepository(), repository,
             connector, conf.ListenPort,true, 1000, true);
 
-            ethConnector = new EthereumOracleConnector(conf.ETHEndpoint, conf.OracleETHAddres);
-            btcConnector = new BitcoinOracleConnector(conf.Network, conf.BTCEndpoint);
+            ethConnector = new EthereumOracleConnector(conf.ETHEndpoint, conf.OracleETHAddres, pkcsConf.User, pkcsConf.EthKey);
+            btcConnector = new BitcoinOracleConnector(conf.Network, conf.BTCEndpoint, pkcsConf.User, pkcsConf.BtcKey);
 
             if (conf.Reprocess)
             {

@@ -13,6 +13,14 @@ namespace Bizanc.io.Matching.Infra.Connector
 {
     public class HSMExternalEthSigner : EthExternalSignerBase
     {
+        private string pkcsUser;
+        private string hsmKey;
+        public HSMExternalEthSigner(string pkcsUser, string hsmKey)
+        {
+            this.pkcsUser = pkcsUser;
+            this.hsmKey = hsmKey;
+        }
+
         public override ExternalSignerTransactionFormat ExternalSignerTransactionFormat { get; protected set; } = ExternalSignerTransactionFormat.Hash;
         public override bool CalculatesV { get; protected set; } = false;
 
@@ -29,7 +37,7 @@ namespace Bizanc.io.Matching.Infra.Connector
         protected override async Task<byte[]> GetPublicKeyAsync()
         {
             return await Task.FromResult(CryptoHelper.StringToByteArray("040d701643c7c8cf247e37f8f20b315f588bec69bf3d71ef4d5f53f379ef16246e0150013aee41d6b344b1313f7ac811ed3d14d3e97b647831bf52e9eb9a2a321f"));
-                                                                                                                                                    
+
         }
 
         protected override async Task<ECDSASignature> SignExternallyAsync(byte[] bytes)
@@ -83,13 +91,13 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                     using (Net.Pkcs11Interop.HighLevelAPI.ISession session = slot.OpenSession(SessionType.ReadWrite))
                     {
-                        session.Login(CKU.CKU_USER, "nodeuser:#$4567bizanc9923!~");
+                        session.Login(CKU.CKU_USER, pkcsUser);
 
                         // Specify signing mechanism
                         Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA);
 
                         List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute> publicKeyAttributes = new List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute>();
-                        publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_LABEL, "newEthKey"));
+                        publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_LABEL, hsmKey));
                         publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_SIGN, true));
 
                         Net.Pkcs11Interop.HighLevelAPI.IObjectHandle key = session.FindAllObjects(publicKeyAttributes).FirstOrDefault();

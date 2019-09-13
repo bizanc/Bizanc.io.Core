@@ -31,8 +31,14 @@ namespace Bizanc.io.Matching.Infra.Connector
 
         private NBitcoin.PubKey pubKey;
 
-        public BitcoinOracleConnector(string network, string endpoint)
+        private string pkcsUser;
+        private string hsmKey;
+
+
+        public BitcoinOracleConnector(string network, string endpoint, string pkcsUser, string hsmKey)
         {
+            this.pkcsUser = pkcsUser;
+            this.hsmKey = hsmKey;
             this.network = network == "testnet" ? NetworkType.Testnet : NetworkType.Mainnet;
             client = new ExplorerClient(new NBXplorerNetworkProvider(this.network).GetBTC(), new Uri(endpoint));
             pubKey = new NBitcoin.PubKey("04c37e0df81851f99775c0f223e2aa1f6e0ebeae7d63b6942ff5c8c01114a3eb13f2d0f3dafbc950898327bf1bd3d933b6ab1d48332867f952875142d8c408c04a");
@@ -147,13 +153,13 @@ namespace Bizanc.io.Matching.Infra.Connector
 
                         using (Net.Pkcs11Interop.HighLevelAPI.ISession session = slot.OpenSession(SessionType.ReadWrite))
                         {
-                            session.Login(CKU.CKU_USER, "nodeuser:#$4567bizanc9923!~");
+                            session.Login(CKU.CKU_USER, pkcsUser);
 
                             // Specify signing mechanism
                             Net.Pkcs11Interop.HighLevelAPI.IMechanism mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA);
 
                             List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute> publicKeyAttributes = new List<Net.Pkcs11Interop.HighLevelAPI.IObjectAttribute>();
-                            publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_LABEL, "newBtcKey"));
+                            publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_LABEL, hsmKey));
                             publicKeyAttributes.Add(new Net.Pkcs11Interop.HighLevelAPI80.ObjectAttribute(CKA.CKA_SIGN, true));
 
 
