@@ -89,7 +89,7 @@ namespace Bizanc.io.Matching.Infra.Connector
             if (contract == null)
                 Console.WriteLine("Acount null");
 
-            var gasPrice = await GetGasPrice(TransferPriority.Average);
+            var gasPrice = await GetGasPrice(TransferPriority.Fast);
             if (symbol == "ETH")
             {
                 Function withdrawEth = contract.GetFunction("withdrawEth");
@@ -99,7 +99,6 @@ namespace Bizanc.io.Matching.Infra.Connector
                 await withdrawEth.SendTransactionAsync(account.Address,             // Sender
                                                                                     new HexBigInteger(900000),  // Gas
                                                                                     new HexBigInteger(gasPrice),
-                                                                                    null,
                                                                                     null,
                                                                                     withdrawHash,      // WithdrawHash
                                                                                     recipient,      // Recipient
@@ -117,11 +116,10 @@ namespace Bizanc.io.Matching.Infra.Connector
                 BigInteger value = new BigInteger(Convert.ToDouble(amount) * Math.Pow(10, double.Parse(decimals.ToString())));
                 decimals.ToString();
 
-                Log.Warning("Sending TBRL Withdrawal...");
+                Log.Warning("Sending "+symbol +" Withdrawal...");
                 await withdrawERC20.SendTransactionAsync(account.Address,             // Sender
                                                                                     new HexBigInteger(900000),  // Gas
                                                                                     new HexBigInteger(gasPrice),
-                                                                                    null,
                                                                                     null,
                                                                                     withdrawHash,      // WithdrawHash
                                                                                     recipient,      // Recipient
