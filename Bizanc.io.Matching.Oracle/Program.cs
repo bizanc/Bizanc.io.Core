@@ -119,11 +119,12 @@ namespace Bizanc.io.Matching.Oracle
             Log.Debug("NodeConfig created");
 
             repository = new WithdrawInfoRepository();
+            var wdRepository = new WithdrawalRepository();
             var connector = new CryptoConnector(conf.OracleETHAddres, conf.OracleBTCAddres, conf.ETHEndpoint, conf.BTCEndpoint, conf.Network);
             var miner = new Miner(new PeerListener(conf.ListenPort), new WalletRepository(),
             new BlockRepository(), new BalanceRepository(), new BookRepository(),
             new DepositRepository(), new OfferRepository(), new TransactionRepository(),
-            new WithdrawalRepository(), new TradeRepository(), repository,
+            wdRepository, new TradeRepository(), repository,
             connector, conf.ListenPort);
 
             ethConnector = new EthereumOracleConnector(conf.ETHEndpoint, conf.OracleETHAddres);
@@ -132,8 +133,9 @@ namespace Bizanc.io.Matching.Oracle
             if (conf.Reprocess)
             {
                 Log.Information("Reprocessing withdraws: ");
-                foreach (var wd in await repository.ListToReprocess())
+                foreach (var wdid in await repository.ListToReprocess())
                 {
+                    var wd = await wdRepository.Get(wdid);
                     Log.Information("Reprocessing withdraw: "+wd.HashStr);
                     await ProcessWithdraw(wd);
                 }

@@ -59,12 +59,11 @@ namespace Bizanc.io.Matching.Infra.Repository
             }
         }
 
-        public async Task<List<Withdrawal>> ListToReprocess()
+        public async Task<List<string>> ListToReprocess()
         {
             using (var s = Store.OpenAsyncSession())
             {
-                var wd = await s.Query<WithdrawInfo>().Where(d => d.Status == WithdrawStatus.Mined ||(d.Status == WithdrawStatus.Sent && d.Timestamp < DateTime.Now.AddHours(-24))).Select(d => d.HashStr).ToListAsync();
-                return await s.Query<Withdrawal>().Where(w => wd.Contains(w.HashStr)).OrderBy(d => d.Timestamp).ToListAsync();
+                return await s.Query<WithdrawInfo>().Where(d => (d.Status == WithdrawStatus.Mined) || ((d.Status == WithdrawStatus.Sent) && (d.Timestamp < DateTime.Now.AddHours(-24)))).Select(d => d.HashStr).ToListAsync();
             }
         }
     }

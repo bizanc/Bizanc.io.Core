@@ -19,6 +19,6 @@ namespace Bizanc.io.Matching.Core.Repository
 
         Task<string> GetLastBtcBlockNumber();
 
-        Task<List<Withdrawal>> ListToReprocess();
+        Task<List<string>> ListToReprocess();
     }
 }
