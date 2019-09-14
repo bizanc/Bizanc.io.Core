@@ -1291,7 +1291,11 @@ namespace Bizanc.io.Matching.Core.Domain
             {
                 await commitLocker.EnterWriteLock();
                 if (of.Timestamp < chain.GetLastBlockTime() || of.Timestamp > DateTime.Now.ToUniversalTime())
+                {
+                    Log.Error("Offer with invalid timestamp "+ of.Timestamp);
                     return false;
+                }
+                    
 
                 if (!await chain.Contains(of) && await chain.Append(of))
                 {
