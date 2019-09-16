@@ -25,31 +25,6 @@ More information:
 
 The platform development is ongoing, testnet is planned to start February 2019.
 
-## Partners
-
-<p align="center">
-    <a href="https://www.blockchainsper.com/" target="_blank"><img src="https://bizanc.io/images/blockchain-insper-logo.png" alt="BT Advogados" width="200px" height="200px" class="img-responsive"></a>
-    <a href="https://www.mercuriuscrypto.com/" target="_blank"><img src="https://bizanc.io/images/mercurius-logo.jpeg" alt="blockchain-explorer" width="200px" height="200px" class="img-responsive"></a>
-    <a href="https://bndesgaragem.com.br/aprovadas-criacao/" target="_blank"><img src="https://bizanc.io/images/bndes-logo.png" alt="BNDES" width="200px" height="200px" class="img-responsive"></a>
-    <a href="https://bitpreco.com/" target="_blank"><img src="https://bizanc.io/images/bitpreco-logo.png" alt="Bitpreco" width="200px" height="200px" class="img-responsive"></a>
-    <a href="https://www.theblockchainvip.com/" target="_blank"><img src="https://bizanc.io/images/blockchain-vip-logo.png" alt="blockchain-explorer" width="200px" height="200px" class="img-responsive"></a>
-</p>
-<p align="center">
-    <a href="https://www.clubinvest.io/" target="_blank"><img src="https://bizanc.io/images/clubinvest-logo.jpeg" alt="ClubInvest" width="200px" height="200px" class="img-responsive"></a>
-    <a href="https://br-pt.wayra.co/" target="_blank"><img src="https://bizanc.io/images/wayra-logo.png" alt="Wayra"  width="200px" height="200px" class="img-responsive"></a>
-    <a href="https://liga.ventures/" target="_blank"><img src="https://bizanc.io/images/liga-ventures-logo.png" alt="Liga Ventures" width="200px" height="200px" class="img-responsive"></a>
-    <a href="https://transferoswiss.ch/" target="_blank"><img src="https://bizanc.io/images/transfero-logo.png" alt="Transferoswiss" width="200px" height="200px" class="img-responsive"></a>
-    <a href="https://www.brztoken.io/" target="_blank"><img src="https://bizanc.io/images/BRZ-logo.png" alt="BRZtoken" width="200px" height="200px" class="img-responsive"></a>
-    
-</p>
-
-<p align="center">
-    <a href="https://www.impacta.edu.br" target="_blank"><img src="https://bizanc.io/images/faculdade-impacta-logo.png" width="200px" height="200px"  alt="Impacta" class="img-responsive"></a>
-    <a href="http://www.dmk3.com.br/" target="_blank"><img src="https://bizanc.io/images/dmk3-logo.png"  width="200px" height="200px"  alt="DMK3" class="img-responsive"></a>
-    <a href="https://www.linkedin.com/company/nabukodonosor-in-blockchain-we-trust/about/" target="_blank"><img src="https://bizanc.io/images/nabuko-logo.png" alt="blockchain-explorer" width="200px" height="200px"  class="img-responsive"></a>
-    <a href="https://bertoluccitorres.adv.br/" target="_blank"><img src="https://bizanc.io/images/btAdvogados-logo.png" alt="BT Advogados" width="200px" height="200px"  class="img-responsive"></a>
-</p>
-
 # Documentation
 
 ## Bizanc.io.Core - Quick Start
