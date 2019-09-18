@@ -22,9 +22,6 @@ More information:
 - API - https://bizanc.io/api
 - API docs - https://bizanc.io/api-docs/index.html
 
-
-The platform development is ongoing, testnet is planned to start February 2019.
-
 # Documentation
 
 ## Bizanc.io.Core - Quick Start

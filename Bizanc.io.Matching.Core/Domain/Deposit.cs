@@ -12,14 +12,18 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public string Asset { get; set; }
 
+        public string AssetId { get; set; }
+
         public decimal Quantity { get; set; }
 
         public string TxHash { get; set; }
+
+        public string BlockNumber { get; set; }
 
         public Deposit Clone() =>
             Clone<Deposit>();
 
         public override string ToString() =>
-            TargetWallet + Asset + Quantity.ToString("0.0000000000000000000000000", CultureInfo.GetCultureInfo("En-US")) + TxHash;
+            TargetWallet + Asset + AssetId + Quantity.ToString("0.0000000000000000000000000", CultureInfo.GetCultureInfo("En-US")) + TxHash + BlockNumber;
     }
 }

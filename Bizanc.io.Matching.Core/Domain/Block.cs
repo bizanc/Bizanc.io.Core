@@ -25,7 +25,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
         public override string HashStr { get { return Header.Hash != null ? Base58.Bitcoin.Encode(new Span<Byte>(Header.Hash)) : ""; } }
 
-        public override DateTime Timestamp{ get { return Header.TimeStamp; } set{} }
+        public override DateTime Timestamp { get { return Header.TimeStamp; } set { } }
         public override long TimeStampTicks { get { return Header.TimeStampTicks; } set { } }
 
         public string PreviousHashStr { get { return Header.PreviousBlockHash != null ? Base58.Bitcoin.Encode(new Span<Byte>(Header.PreviousBlockHash)) : ""; } }
@@ -127,6 +127,15 @@ namespace Bizanc.io.Matching.Core.Domain
             }
 
             Header.MerkleRoot = root;
+        }
+
+        public void BuildDictionary()
+        {
+            Transactions = transactions;
+            Offers = offers;
+            OfferCancels = offerCancels;
+            Deposits = deposits;
+            Withdrawals = withdrawals;
         }
 
         public override string ToString()

@@ -35,7 +35,7 @@ namespace Bizanc.io.Matching.Infra.Repository
                 await s.StoreAsync(info);
                 await s.SaveChangesAsync();
 
-                s.Advanced.WaitForIndexesAfterSaveChanges();
+                s.Advanced.WaitForIndexesAfterSaveChanges(new TimeSpan(1, 0, 0));
             }
         }
 
@@ -44,17 +44,19 @@ namespace Bizanc.io.Matching.Infra.Repository
             using (var s = Store.OpenAsyncSession())
             {
                 var points = await s.Query<BlockPersistInfo>().Select(bl => new { id = bl.Id, timestap = bl.TimeStamp }).ToListAsync();
-                if (points != null && points.Count > 20)
-                    points = points.OrderBy(p => p.timestap).ToList();
-                while (points.Count > 20)
+                if (points.Count > 20)
                 {
-                    var id = points[0].id;
-                    if (!string.IsNullOrEmpty(id))
+                    points = points.OrderBy(p => p.timestap).ToList();
+                    while (points.Count > 20)
                     {
-                        s.Delete(id);
-                        await s.SaveChangesAsync();
+                        var id = points[0].id;
+                        if (!string.IsNullOrEmpty(id))
+                        {
+                            s.Delete(id);
+                            await s.SaveChangesAsync();
+                        }
+                        points.RemoveAt(0);
                     }
-                    points.RemoveAt(0);
                 }
             }
         }
@@ -63,17 +65,6 @@ namespace Bizanc.io.Matching.Infra.Repository
         {
             using (var s = Store.OpenAsyncSession())
                 return await s.Query<Block>().Where(b => b.HashStr == blockHash).FirstOrDefaultAsync();
-        }
-
-        private async Task StreamResult(IAsyncDocumentSession session, IOrderedQueryable<Block> query, Channel<Block> result)
-        {
-            using (var stream = await session.Advanced.StreamAsync(query))
-            {
-                while (await stream.MoveNextAsync())
-                    await result.Writer.WriteAsync(stream.Current.Document);
-            }
-
-            result.Writer.Complete();
         }
 
         public async Task<Channel<Block>> Get(long fromDepth, long toDepth = 0)

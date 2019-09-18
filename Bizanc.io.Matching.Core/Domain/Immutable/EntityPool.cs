@@ -8,6 +8,7 @@ using Bizanc.io.Matching.Core.Domain.Messages;
 using System.Threading;
 using System.Threading.Tasks;
 using Bizanc.io.Matching.Core.Util;
+using Serilog;
 
 namespace Bizanc.io.Matching.Core.Domain.Immutable
 {
@@ -177,9 +178,8 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
 
         public void VerifyTX(Domain.Transaction tx)
         {
-            Console.WriteLine("Contain Pool " + pool.ContainsKey(tx.HashStr));
-            Console.WriteLine("Pool Count" + pool.Count);
-
+            Log.Debug("Contain Pool " + pool.ContainsKey(tx.HashStr));
+            Log.Debug("Pool Count" + pool.Count);
         }
 
         public async Task Remove(IEnumerable<T> batch)

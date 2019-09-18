@@ -13,6 +13,10 @@ namespace Bizanc.io.Matching.Api.Model
         public string Asset { get; set; }
         public decimal Size { get; set; }
         public long Timestamp { get; set; }
+
+        public string OracleAddress { get; set; }
+
+        public decimal OracleFee { get; set; }
         public string Signature { get; set; }
     }
 }

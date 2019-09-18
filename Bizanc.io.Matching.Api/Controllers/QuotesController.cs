@@ -30,7 +30,7 @@ namespace Bizanc.io.Matching.Api.Controllers
         /// </param>
         /// <response code="200">Success</response>
         [HttpGet("{reference}")]
-        public async Task<List<Quote>> GetQuotes([FromRoute]string reference = "TBRL")
+        public async Task<List<Quote>> GetQuotes([FromRoute]string reference = "BIZ")
         {
             return await repository.GetQuotes(reference);
         }

@@ -4,6 +4,7 @@ project.lock.json
 .DS_Store
 *.pyc
 nupkg/
+pkcscfg.json
 
 # Visual Studio Code
 .vscode
@@ -26,6 +27,7 @@ x64/
 x86/
 build/
 bld/
+log/
 [Bb]in/
 [Oo]bj/
 [Oo]ut/

@@ -7,17 +7,20 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Collections.Immutable" Version="1.5.0" />
+   <None Include="appsettings.json" CopyToPublishDirectory="Always" />
+   <None Include="appspec.yml"  CopyToPublishDirectory="Always" />
+   <None Include="start-seednode-service.sh" CopyToPublishDirectory="Always" />
+   <None Include="stop-seednode-service.sh" CopyToPublishDirectory="Always" />
+   <None Include="before-install.sh" CopyToPublishDirectory="Always" />
   </ItemGroup>
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
-    <LangVersion>7.2</LangVersion>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup>
     <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
   </PropertyGroup>
-
 </Project>

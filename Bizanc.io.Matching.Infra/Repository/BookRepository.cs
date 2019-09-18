@@ -25,17 +25,19 @@ namespace Bizanc.io.Matching.Infra.Repository
             using (var s = Store.OpenAsyncSession())
             {
                 var points = await s.Query<Book>().Select(bl => new { id = bl.Id, timestap = bl.Timestamp }).ToListAsync();
-                if (points != null && points.Count > 20)
-                    points = points.OrderBy(p => p.timestap).ToList();
-                while (points.Count > 20)
+                if (points.Count > 20)
                 {
-                    var id = points[0].id;
-                    if (!string.IsNullOrEmpty(id))
+                    points = points.OrderBy(p => p.timestap).ToList();
+                    while (points.Count > 20)
                     {
-                        s.Delete(id);
-                        await s.SaveChangesAsync();
+                        var id = points[0].id;
+                        if (!string.IsNullOrEmpty(id))
+                        {
+                            s.Delete(id);
+                            await s.SaveChangesAsync();
+                        }
+                        points.RemoveAt(0);
                     }
-                    points.RemoveAt(0);
                 }
             }
         }

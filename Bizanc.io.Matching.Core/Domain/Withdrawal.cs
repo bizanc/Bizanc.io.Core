@@ -9,18 +9,22 @@ namespace Bizanc.io.Matching.Core.Domain
         public override MessageType MessageType { get { return MessageType.Withdrawal; } }
 
         public string SourceWallet { get; set; }
-        
+
         public string TargetWallet { get; set; }
 
         public string Asset { get; set; }
 
         public decimal Size { get; set; }
 
-        public string Signature;
+        public string Signature { get; set; }
+
+        public string OracleAdrress { get; set; }
+
+        public decimal OracleFee { get; set; }
 
         public override string ToString()
         {
-            return SourceWallet + TargetWallet + Asset + TimeStampTicks + Size.ToString("0.0000000000000000000000000", CultureInfo.GetCultureInfo("En-US"));
+            return SourceWallet + TargetWallet + Asset + TimeStampTicks + Size.ToString("0.0000000000000000000000000", CultureInfo.GetCultureInfo("En-US")) + OracleAdrress + OracleFee.ToString("0.0000000000000000000000000", CultureInfo.GetCultureInfo("En-US"));
         }
     }
 }

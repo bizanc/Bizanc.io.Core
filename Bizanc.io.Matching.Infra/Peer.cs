@@ -14,6 +14,7 @@ using Bizanc.io.Matching.Core.Domain;
 using Bizanc.io.Matching.Core.Domain.Messages;
 using Bizanc.io.Matching.Core.Util;
 using Newtonsoft.Json;
+using Serilog;
 
 namespace Bizanc.io.Matching.Infra
 {
@@ -83,7 +84,7 @@ namespace Bizanc.io.Matching.Infra
             {
                 if ((DateTime.Now - lastHeartBeat).Seconds >= 30000)
                 {
-                    Console.WriteLine("Peer Timeout: " + Address);
+                    Log.Error("Peer Timeout: " + Address);
                     await Disconnect();
                     return;
                 }
@@ -96,13 +97,13 @@ namespace Bizanc.io.Matching.Infra
 
         private async Task SendTask()
         {
-            while(await sendStream.Reader.WaitToReadAsync())
+            while (await sendStream.Reader.WaitToReadAsync())
             {
                 var data = await sendStream.Reader.ReadAsync();
                 var msg = Newtonsoft.Json.JsonConvert.SerializeObject(data);
 
-                if(data.MessageType ==  MessageType.Block)
-                    Console.WriteLine("Block size: "+Encoding.UTF8.GetByteCount(msg));
+                if (data.MessageType == MessageType.Block)
+                    Log.Debug("Block size: " + Encoding.UTF8.GetByteCount(msg));
 
                 await streamWriter.WriteLineAsync(msg);
                 await streamWriter.FlushAsync();
@@ -123,7 +124,7 @@ namespace Bizanc.io.Matching.Infra
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Log.Error(e.ToString());
             }
 
             return null;
@@ -145,6 +146,28 @@ namespace Bizanc.io.Matching.Infra
         public void StartHeartBeat()
         {
             Task.Delay(1000).ContinueWith(t => HeartBeatTask(t));
+        }
+
+        public bool Equal(string address)
+        {
+            try
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    return false;
+
+                var values = address.Split(':');
+                var port = values[values.Length - 1];
+                var ip = address.Substring(0, address.Length - port.Length - 1);
+
+                var ipad = IPAddress.Parse(ip).MapToIPv4();
+
+                var endpoint = (IPEndPoint)client.Client.RemoteEndPoint;
+                return endpoint.Address.MapToIPv4().Equals(ipad);
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

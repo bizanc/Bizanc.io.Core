@@ -6,14 +6,21 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Bizanc.io.Matching.Core.Domain;
+using Serilog;
 
 namespace Bizanc.io.Matching.Infra
 {
     public class PeerListener : IPeerListener
     {
         private TcpListener listener;
+        private int listenPort;
+
+        public PeerListener(int listenPort)
+        {
+            this.listenPort = listenPort;
+        }
         
-        public async Task Start(int listenPort)
+        public async Task Start()
         {
             listener = new TcpListener(IPAddress.IPv6Any, listenPort);
             listener.Server.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
@@ -21,11 +28,12 @@ namespace Bizanc.io.Matching.Infra
             {
                 //Only supported on Windows, other platforms thows exception.
                 listener.AllowNatTraversal(true);
-            } catch { }
+            }
+            catch { }
 
             listener.Start();
 
-            Console.WriteLine("Listener started...");
+            Log.Debug("Listener started...");
 
             await Task.CompletedTask;
         }
@@ -34,21 +42,22 @@ namespace Bizanc.io.Matching.Infra
         {
             try
             {
-                return await Task<Peer>.Run(() =>
-                {
-                    Console.WriteLine("Connectig to: " + address);
+                Log.Debug("Connectig to: " + address);
 
-                    var values = address.Split(':');
-                    var port = values[values.Length - 1];
-                    var ip = address.Substring(0, address.Length - port.Length + 1);
+                var values = address.Split(':');
+                var port = values[values.Length - 1];
+                var ip = address.Substring(0, address.Length - port.Length - 1);
 
-                    return new Peer(new TcpClient(values[0], int.Parse(port)));
-                });
+                var ipad = IPAddress.Parse(ip).MapToIPv4();
+                var client = new TcpClient();
+                await client.ConnectAsync(ipad, int.Parse(port));
+
+                return new Peer(client);
             }
             catch (Exception e)
             {
-                Console.WriteLine("Failed to connect peer");
-                Console.WriteLine(e.ToString());
+                Log.Error("Failed to connect peer: " + address);
+                Log.Debug(e.ToString());
             }
 
             return null;
@@ -58,16 +67,16 @@ namespace Bizanc.io.Matching.Infra
         {
             try
             {
-                Console.WriteLine("Accept ");
+                Log.Debug("Accept ");
                 var tcpClient = await listener.AcceptTcpClientAsync();
                 var peer = new Peer(tcpClient);
-                Console.WriteLine("Connection Received: " + peer.Address);
+                Log.Information("Connection Received: " + peer.Address);
 
                 return peer;
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Log.Error(e.ToString());
             }
 
             return null;

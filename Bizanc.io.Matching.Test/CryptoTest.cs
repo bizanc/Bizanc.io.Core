@@ -12,6 +12,8 @@ namespace Bizanc.io.Matching.Test
         [Fact]
         public void Test()
         {
+            CryptoHelper.IsValidBizancAddress("2AsFp8AXdXqFdXz5R4uFMs39rreKpd2UDgnikxnDVJQtiF8UGh").Should().BeTrue();
+
             var pubKey = "BJ954IPZsIkawNGZw5CQjFBYPl4M/H96aqaqLjbvk70O5Jwk37OPy62VIdAEIsRecsVjWXBBYj/UALNE0ulgMUc=";
             var targetWallet = "TTTTTTTTTTTTTT";
             var size = 10;
@@ -22,11 +24,11 @@ namespace Bizanc.io.Matching.Test
             CryptoHelper.IsValidSignature(transaction.ToString(), pubKey, signR).Should().BeTrue();
         }
 
-        [Fact]
-        public void Deposit()
-        {
-            var con = new CryptoConnector();
-            var test = con.DepositBtc("mzVr7Pk8gjWQBGqkGdcn5MZRS9ToxPWTXj", "n4nbUmxSRkSPDuRMTeuLV24pPQZdhqfjKN", 0.001m);
-        }
+        // [Fact]
+        // public void Deposit()
+        // {
+        //     var con = new CryptoConnector();
+        //     var test = con.DepositBtc("mzVr7Pk8gjWQBGqkGdcn5MZRS9ToxPWTXj", "n4nbUmxSRkSPDuRMTeuLV24pPQZdhqfjKN", 0.001m);
+        // }
     }
 }

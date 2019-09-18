@@ -30,6 +30,7 @@ namespace Bizanc.io.Matching.Core.Domain
 
         Task<IList<Withdrawal>> ListWithdrawals(int size);
         Task<Withdrawal> GetWithdrawalById(string id);
+        Task<WithdrawInfo> GetWithdrawInfoById(string id);
         Task<List<Withdrawal>> ListWithdrawalsPool(int size);
         Task<IList<Withdrawal>> ListWithdrawalsBySourceWallet(string wallet, int size);
         Task<IList<Withdrawal>> ListWithdrawalsByTargetWallet(string wallet, int size);
@@ -39,7 +40,9 @@ namespace Bizanc.io.Matching.Core.Domain
         Task<Block> GetBlockByHash(string hash);
         Task<IList<Block>> ListBlocksFromDepth(long depth);
 
-        Task<IList<Trade>> ListTrades(string asset, string reference, DateTime from);
+        Task<IList<Trade>> ListTradesAscending(string asset, string reference, DateTime from);
+
+        Task<IList<Trade>> ListTradesDescending(string asset, string reference, DateTime from, int max);
         Task<List<Quote>> GetQuotes(string reference);
       
         IList<string> ListPeers();

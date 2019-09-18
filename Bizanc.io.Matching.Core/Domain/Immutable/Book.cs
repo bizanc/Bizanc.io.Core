@@ -5,6 +5,7 @@ using System.Linq;
 using SimpleBase;
 using Bizanc.io.Matching.Core.Crypto;
 using Newtonsoft.Json;
+using Serilog;
 
 namespace Bizanc.io.Matching.Core.Domain.Immutable
 {
@@ -17,9 +18,9 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
 
         public ImmutableDictionary<string, OfferBook> Dictionary { get; private set; } = new Dictionary<string, OfferBook>().ToImmutableDictionary();
 
-        public ImmutableList<Offer> ProcessedOffers { get; private set; } = new List<Offer>().ToImmutableList();
+        public ImmutableList<Offer> ProcessedOffers { get; set; } = new List<Offer>().ToImmutableList();
 
-        public ImmutableList<Trade> Trades { get; private set; } = new List<Trade>().ToImmutableList();
+        public ImmutableList<Trade> Trades { get;  set; } = new List<Trade>().ToImmutableList();
 
         public DateTime Timestamp { get; set; }
 
@@ -29,7 +30,39 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
         {
             Dictionary = Dictionary.Add("BTC", new OfferBook("BTC"));
             Dictionary = Dictionary.Add("ETH", new OfferBook("ETH"));
-            Dictionary = Dictionary.Add("TBRL", new OfferBook("TBRL"));
+            Dictionary = Dictionary.Add("USDT", new OfferBook("USDT"));
+            Dictionary = Dictionary.Add("MTL", new OfferBook("MTL"));
+            Dictionary = Dictionary.Add("USDC", new OfferBook("USDC"));
+            Dictionary = Dictionary.Add("BAT", new OfferBook("BAT"));
+            Dictionary = Dictionary.Add("CRO", new OfferBook("CRO"));
+            Dictionary = Dictionary.Add("DEX", new OfferBook("DEX"));
+            Dictionary = Dictionary.Add("TUSD", new OfferBook("TUSD"));
+            Dictionary = Dictionary.Add("DAI", new OfferBook("DAI"));
+            Dictionary = Dictionary.Add("EGT", new OfferBook("EGT"));
+            Dictionary = Dictionary.Add("ENJ", new OfferBook("ENJ"));
+            Dictionary = Dictionary.Add("HT", new OfferBook("HT"));
+            Dictionary = Dictionary.Add("INB", new OfferBook("INB"));
+            Dictionary = Dictionary.Add("KCS", new OfferBook("KCS"));
+            Dictionary = Dictionary.Add("ELF", new OfferBook("ELF"));
+            Dictionary = Dictionary.Add("ZRX", new OfferBook("ZRX"));
+            Dictionary = Dictionary.Add("LINK", new OfferBook("LINK"));
+            Dictionary = Dictionary.Add("MANA", new OfferBook("MANA"));
+            Dictionary = Dictionary.Add("MATIC", new OfferBook("MATIC"));
+            Dictionary = Dictionary.Add("MCO", new OfferBook("MCO"));
+            Dictionary = Dictionary.Add("MKR", new OfferBook("MKR"));
+            Dictionary = Dictionary.Add("ZB", new OfferBook("ZB"));
+            Dictionary = Dictionary.Add("OMG", new OfferBook("OMG"));
+            Dictionary = Dictionary.Add("PAX", new OfferBook("PAX"));
+            Dictionary = Dictionary.Add("PERL", new OfferBook("PERL"));
+            Dictionary = Dictionary.Add("LAMB", new OfferBook("LAMB"));
+            Dictionary = Dictionary.Add("SEELE", new OfferBook("SEELE"));
+            Dictionary = Dictionary.Add("REP", new OfferBook("REP"));
+            Dictionary = Dictionary.Add("REALT", new OfferBook("REALT"));
+            Dictionary = Dictionary.Add("BRZ", new OfferBook("BRZ"));
+            Dictionary = Dictionary.Add("SNT", new OfferBook("SNT"));
+            Dictionary = Dictionary.Add("NXPS", new OfferBook("NXPS"));
+            Dictionary = Dictionary.Add("GUSD", new OfferBook("GUSD"));
+            Dictionary = Dictionary.Add("BNB", new OfferBook("BNB"));
         }
 
         public Book(Book previous)
@@ -112,7 +145,7 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
                 }
             }
             else
-                Console.WriteLine("Wallet has no balance to send offer.");
+                Log.Error("Wallet has no balance to send offer.");
 
             if (result)
                 return (true, new Book(this, transact, dic, ProcessedOffers.AddRange(offers), Trades.AddRange(trades)));
@@ -134,6 +167,9 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
                 {
                     clone.Finish();
                     ellegibles.Add(clone);
+                    foreach(var t in clone.Trades)
+                        root = CryptoHelper.Hash(Base58.Bitcoin.Encode(new Span<Byte>(root)) + t.ToString());
+
                     root = CryptoHelper.Hash(Base58.Bitcoin.Encode(new Span<Byte>(root)) + clone.ToString());
                 }
             }
@@ -155,7 +191,7 @@ namespace Bizanc.io.Matching.Core.Domain.Immutable
                 {
                     if (offer.Wallet != of.Wallet)
                     {
-                        Console.WriteLine("Invalide offer cancel, not owner");
+                        Log.Error("Invalide offer cancel, not owner");
                         return (false, this);
                     }
 

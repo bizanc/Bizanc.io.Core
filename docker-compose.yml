@@ -1,103 +1,50 @@
 version: '2.1'
 
 services:
-  masternode:
+  node1:
     image: bizancio.core:latest
     build: .
     ports:
-      - 3001:5556
-      - 4000:5001
-    # environment:
-    #   - MASTER=TRUE
-  # node1:
-  #   image: bizancio.core:latest
-  #   ports:
-  #     - 3002:5556
-  #     - 4001:5001
-  #   environment:
-  #     - MASTER=FALSE
-  #   depends_on:
-  #     - "masternode"
+      - 5558:5558
+      - 5001:5001
+    volumes:
+      - "biznode_datadir1:/app/RavenDB"
   # node2:
   #   image: bizancio.core:latest
+  #   build: .
   #   ports:
-  #     - 3003:5556
-  #     - 4002:5000
-  #   environment:
-  #     - MASTER=FALSE
-  #   depends_on:
-  #     - "node1"
+  #     - 5557:5556
+  #     - 5002:5001
+  #   volumes:
+  #     - "biznode_datadir2:/app/RavenDB"
   # node3:
   #   image: bizancio.core:latest
+  #   build: .
   #   ports:
-  #     - 3004:5556
-  #     - 4003:5000
-  #   environment:
-  #     - MASTER=FALSE
-  #   depends_on:
-  #     - "node2"
+  #     - 5558:5556
+  #     - 5003:5001
+  #   volumes:
+  #     - "biznode_datadir3:/app/RavenDB"
   # node4:
   #   image: bizancio.core:latest
+  #   build: .
   #   ports:
-  #     - 3005:5556
-  #     - 4004:5000
-  #   environment:
-  #     - MASTER=FALSE
-  #   depends_on:
-  #     - "node3"
-
+  #     - 5559:5556
+  #     - 5004:5001
+  #   volumes:
+  #     - "biznode_datadir4:/app/RavenDB"
   # node5:
   #   image: bizancio.core:latest
+  #   build: .
   #   ports:
-  #     - 3006:5556
-  #     - 4005:5000
-  #   environment:
-  #     - MASTER=FALSE
-  #   depends_on:
-  #     - "node4"
-  # node6:
-  #   image: bizancio.core:latest
-  #   ports:
-  #     - 3007:5556
-  #     - 4006:5000
-  #   environment:
-  #     - MASTER=FALSE
-  #   depends_on:
-  #     - "node5"
-  # node7:
-  #   image: bizancio.core:latest
-  #   ports:
-  #     - 3008:5556
-  #     - 4007:5000
-  #   environment:
-  #     - MASTER=FALSE
-  #   depends_on:
-  #     - "node6"
-  # node8:
-  #   image: bizancio.core:latest
-  #   ports:
-  #     - 3009:5556
-  #     - 4008:5000
-  #   environment:
-  #     - MASTER=FALSE
-  #   depends_on:
-  #     - "node7"
-  # node9:
-  #   image: bizancio.core:latest
-  #   ports:
-  #     - 3010:5556
-  #     - 4009:5000
-  #   environment:
-  #     - MASTER=FALSE
-  #   depends_on:
-  #     - "node8"
-  # node10:
-  #   image: bizancio.core:latest
-  #   ports:
-  #     - 3010:5556
-  #     - 4010:5000
-  #   environment:
-  #     - MASTER=FALSE
-  #   depends_on:
-  #     - "node9"
-      
+  #     - 5560:5556
+  #     - 5005:5001
+  #   volumes:
+  #     - "biznode_datadir5:/app/RavenDB"
+volumes:
+  biznode_datadir1: 
+  # biznode_datadir2: 
+  # biznode_datadir3: 
+  # biznode_datadir4: 
+  # biznode_datadir5: 
+    
