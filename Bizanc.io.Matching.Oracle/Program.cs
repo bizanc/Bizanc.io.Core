@@ -109,9 +109,6 @@ namespace Bizanc.io.Matching.Oracle
 
         async static Task Main(string[] args)
         {
-           var pubKey = new NBitcoin.PubKey("045138d46c0e99a3b94a49551581097bae7162bdbd70dbddc580963f98b2771bbee5ecf367dfa34b2c9952269691f87153cbf2a1589c177dfd66ac6735b92f6cf7");
-            Console.WriteLine(pubKey.GetAddress(ScriptPubKeyType.Legacy, NBitcoin.Network.Main));
-
             Console.WriteLine("Starting Oracle");
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
