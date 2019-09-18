@@ -36,7 +36,7 @@ namespace Bizanc.io.Matching.Infra.Connector
 
         protected override async Task<byte[]> GetPublicKeyAsync()
         {
-            return await Task.FromResult(CryptoHelper.StringToByteArray("040d701643c7c8cf247e37f8f20b315f588bec69bf3d71ef4d5f53f379ef16246e0150013aee41d6b344b1313f7ac811ed3d14d3e97b647831bf52e9eb9a2a321f"));
+            return await Task.FromResult(CryptoHelper.StringToByteArray("043d84d9920d99849b11a5a1d648df963e4d1385dc975597a507da74fcd023a18b6e1e338862c9bc0f3b5f9b6c2099ed4c296f65865a4a2f647588e7d5ac7b7d9e"));
 
         }
 

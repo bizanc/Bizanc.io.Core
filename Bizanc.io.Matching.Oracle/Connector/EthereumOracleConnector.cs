@@ -36,8 +36,8 @@ namespace Bizanc.io.Matching.Infra.Connector
         {
             this.contractAddress = contractAddress;
             var client = new Nethereum.JsonRpc.Client.RpcClient(new Uri(endpoint));
-            account = new ExternalAccount("0x0147059dfda73109414014E939bFbc69C791FD18", new HSMExternalEthSigner(pkcsUser, key), 1);
-            account.NonceService = new InMemoryNonceService("0x0147059dfda73109414014E939bFbc69C791FD18", client);
+            account = new ExternalAccount("0x7957Db97cB19fB029968595E9325e2E5C92EAF33", new HSMExternalEthSigner(pkcsUser, key), 1);
+            account.NonceService = new InMemoryNonceService("0x7957Db97cB19fB029968595E9325e2E5C92EAF33", client);
             account.InitialiseDefaultTransactionManager(client);
 
             web3 = new Web3Geth(account, endpoint);
@@ -113,12 +113,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 var token = web3.Eth.GetContract(ERC20ABI, tokenDictionary[symbol]);
                 var decimals = await token.GetFunction("decimals").CallAsync<BigInteger>();
 
-                var power = 1;
-
-                for (int i = 0; i < decimals; i++)
-                    power = 10 * power;
-
-                BigInteger value = new BigInteger(amount * power);
+                BigInteger value = ToTokenBase(amount, decimals);
                 decimals.ToString();
 
                 Log.Warning("Sending "+symbol +" Withdrawal...");
@@ -134,6 +129,16 @@ namespace Bizanc.io.Matching.Infra.Connector
             }
 
             Log.Warning("Withdrawal Sent: " + withdrawHash);
+        }
+
+        private BigInteger ToTokenBase(decimal value, BigInteger decimals)
+        {
+            decimal p = 1;
+
+            for (int i = 0; i < decimals; i++)
+                p = 10 * p;
+                
+            return new BigInteger(value * p);
         }
 
         public enum TransferPriority
