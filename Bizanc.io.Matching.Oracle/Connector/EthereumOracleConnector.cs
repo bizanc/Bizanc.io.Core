@@ -113,12 +113,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 var token = web3.Eth.GetContract(ERC20ABI, tokenDictionary[symbol]);
                 var decimals = await token.GetFunction("decimals").CallAsync<BigInteger>();
 
-                var power = 1;
-
-                for (int i = 0; i < decimals; i++)
-                    power = 10 * power;
-
-                BigInteger value = new BigInteger(amount * power);
+                BigInteger value = ToTokenBase(amount, decimals);
                 decimals.ToString();
 
                 Log.Warning("Sending "+symbol +" Withdrawal...");
@@ -134,6 +129,16 @@ namespace Bizanc.io.Matching.Infra.Connector
             }
 
             Log.Warning("Withdrawal Sent: " + withdrawHash);
+        }
+
+        private BigInteger ToTokenBase(decimal value, BigInteger decimals)
+        {
+            decimal p = 1;
+
+            for (int i = 0; i < decimals; i++)
+                p = 10 * p;
+                
+            return new BigInteger(value * p);
         }
 
         public enum TransferPriority

@@ -155,7 +155,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                             var token = web3.Eth.GetContract(ERC20ABI, d.Event.AssetId);
                             var decimals = await token.GetFunction("decimals").CallAsync<BigInteger>();
 
-                            value = Convert.ToDecimal(double.Parse(d.Event.Value.ToString()) / Math.Pow(10, double.Parse(decimals.ToString())));
+                            value = FromTokenBase(d.Event.Value,decimals);
                             decimals.ToString();
                         }
 
@@ -174,6 +174,16 @@ namespace Bizanc.io.Matching.Infra.Connector
             }
 
             return deposits;
+        }
+
+        private decimal FromTokenBase(BigInteger value, BigInteger decimals)
+        {
+            decimal p = 1;
+
+            for (int i = 0; i < decimals; i++)
+                p = 10 * p;
+
+            return ((decimal)value) / p;
         }
 
         private async Task<List<WithdrawInfo>> GetWithdraws(NewFilterInput filter)
