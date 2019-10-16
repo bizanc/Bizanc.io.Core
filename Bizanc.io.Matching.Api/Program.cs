@@ -70,7 +70,6 @@ namespace Bizanc.io.Matching.Api
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder()
                 .UseUrls("http://0.0.0.0:5000")
-                .UseLibuv(c => c.ThreadCount = 4)
                 .ConfigureServices(servicesCollection =>
                     {
                         servicesCollection.AddSingleton<IChainRepository>(StartMiner(args));

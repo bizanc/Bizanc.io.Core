@@ -81,7 +81,7 @@ namespace Bizanc.io.Matching.Api
                 builder.AllowAnyHeader();
                 builder.AllowAnyMethod();
             });
-            app.UseMvc();
+            //app.UseMvc();
         }
     }
 }
