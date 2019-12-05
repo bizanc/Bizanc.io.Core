@@ -35,7 +35,7 @@ namespace Bizanc.io.Matching.Infra.Connector
         {
             this.depositStream = depositStream;
             this.withdrawStream = withdrawStream;
-            this.oracleAddress = TrackedSource.Create(new BitcoinPubKeyAddress(oracleAddress));
+            this.oracleAddress = TrackedSource.Create(new BitcoinPubKeyAddress(oracleAddress, Network.Main));
             this.network = network == "testnet" ? NetworkType.Testnet : NetworkType.Mainnet;
             client = new ExplorerClient(new NBXplorerNetworkProvider(this.network).GetBTC(), new Uri(endpoint));
             client.SetNoAuth();

@@ -11,11 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.CloudHSM" Version="3.3.100.72" />
-    <PackageReference Include="AWSSDK.CloudHSMV2" Version="3.3.100.72" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.AzureKeyVault" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="2.2.0" />
-    <PackageReference Include="nbitcoin" Version="4.2.6" />
+    <PackageReference Include="nbitcoin" Version="4.2.16" />
     <PackageReference Include="Pkcs11Interop" Version="5.0.0" />
     <PackageReference Include="restsharp" Version="106.6.10" />
   </ItemGroup>
@@ -23,7 +19,7 @@
   <PropertyGroup>
     <UserSecretsId>0605332-596d-4aaa-98b5-fcb33529825e</UserSecretsId>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <LangVersion>8</LangVersion>
   </PropertyGroup>
 
