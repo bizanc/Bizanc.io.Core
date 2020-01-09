@@ -8,6 +8,7 @@ using System.Web;
 
 namespace Bizanc.io.Matching.Api.Controllers
 {
+    [ApiController]
     [Route("api/[controller]")]
     public class BlocksController : Controller
     {
