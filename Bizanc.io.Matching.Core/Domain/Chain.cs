@@ -139,6 +139,36 @@ namespace Bizanc.io.Matching.Core.Domain
             return result;
         }
 
+        public List<Block> GetBlocksOldToNew(long offset)
+        {
+            var result = new List<Block>();
+            var current = this;
+
+            while (current != null && current.CurrentBlock != null && current.CurrentBlock.Header.Depth >= offset)
+            {
+                result.Insert(0, current.CurrentBlock);
+
+                current = current.Previous;
+            }
+
+            return result;
+        }
+
+        public List<Block> GetBlocksOldToNew(DateTime lastDateTime)
+        {
+            var result = new List<Block>();
+            var current = this;
+
+            while (current != null && current.CurrentBlock != null && current.CurrentBlock.Header.TimeStamp >= lastDateTime)
+            {
+                result.Insert(0, current.CurrentBlock);
+
+                current = current.Previous;
+            }
+
+            return result;
+        }
+
         public async Task<List<Transaction>> GetAllTransactions()
         {
             var result = new List<Transaction>();

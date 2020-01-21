@@ -1760,11 +1760,11 @@ namespace Bizanc.io.Matching.Core.Domain
             try
             {
                 var result = new List<Block>();
-                var chainBlocks = chain.GetBlocksOldToNew();
+                var chainBlocks = chain.GetBlocksOldToNew(offSet);
                 if (chainBlocks.Count == 0)
                     return result;
 
-                var blocksToSend = chainBlocks.Where(b => b.Header.Depth >= offSet).OrderBy(b => b.Header.Depth).ToList();
+                var blocksToSend = chainBlocks.OrderBy(b => b.Header.Depth).ToList();
 
                 if (blocksToSend.Count > 0 && offSet < blocksToSend.First().Header.Depth)
                 {
@@ -1791,7 +1791,7 @@ namespace Bizanc.io.Matching.Core.Domain
         public async Task GetBlocks(long offSet, IPeer sender)
         {
             var blockResponse = new BlockResponse();
-            var chainBlocks = chain.GetBlocksOldToNew();
+            var chainBlocks = chain.GetBlocksOldToNew(offSet);
             if (chainBlocks.Count == 0)
             {
                 blockResponse.End = true;
@@ -1978,7 +1978,7 @@ namespace Bizanc.io.Matching.Core.Domain
         {
             var stats = await blockRepository.GetBlockStats();
             stats.Blocks.LastBlockTime = chain.CurrentBlock.Timestamp;
-            var chainBlocks = chain.GetBlocksOldToNew();
+            var chainBlocks = chain.GetBlocksOldToNew(DateTime.Now.ToUniversalTime().AddHours(-24));
             if (stats.Blocks.TotalCount == 0)
                 stats.Blocks.FirstBlockTime = chainBlocks.First().Timestamp;
             stats.Blocks.TotalCount += chainBlocks.Count;
