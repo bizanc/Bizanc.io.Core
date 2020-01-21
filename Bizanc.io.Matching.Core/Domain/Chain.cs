@@ -107,44 +107,34 @@ namespace Bizanc.io.Matching.Core.Domain
         public async Task<ICollection<OfferCancel>> GetOfferCancelPool() => await Pool.OfferCancelPool.GetPool();
 
 
-        public List<Block> GetBlocksNewToOld(List<Block> result = null)
+        public List<Block> GetBlocksNewToOld()
         {
-            if (result == null)
-                result = new List<Block>();
+            var result = new List<Block>();
+            var current = this;
 
-            if (CurrentBlock != null)
-                result.Add(CurrentBlock);
+            while (current != null)
+            {
+                if (current.CurrentBlock != null)
+                    result.Add(current.CurrentBlock);
 
-            if (Previous != null)
-                result = Previous.GetBlocksNewToOld(result);
+                current = current.Previous;
+            }
 
             return result;
         }
 
-        public List<Block> GetBlocksNewToOld(int skip, List<Block> result = null)
+        public List<Block> GetBlocksOldToNew()
         {
-            if (result == null)
-                result = new List<Block>();
+            var result = new List<Block>();
+            var current = this;
 
-            if (CurrentBlock != null && skip == 0)
-                result.Add(CurrentBlock);
+            while (current != null)
+            {
+                if (current.CurrentBlock != null)
+                    result.Insert(0, current.CurrentBlock);
 
-            if (Previous != null)
-                result = Previous.GetBlocksNewToOld(--skip, result);
-
-            return result;
-        }
-
-        public List<Block> GetBlocksOldToNew(List<Block> result = null)
-        {
-            if (result == null)
-                result = new List<Block>();
-
-            if (Previous != null)
-                result = Previous.GetBlocksOldToNew(result);
-
-            if (CurrentBlock != null)
-                result.Add(CurrentBlock);
+                current = current.Previous;
+            }
 
             return result;
         }
