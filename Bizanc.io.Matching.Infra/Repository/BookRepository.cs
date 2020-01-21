@@ -14,6 +14,10 @@ namespace Bizanc.io.Matching.Infra.Repository
 {
     public class BookRepository : BaseRepository<Book>, IBookRepository
     {
+        public BookRepository(string db = null)
+        : base(db)
+        { }
+
         public async Task<List<Book>> Get()
         {
             using (var s = Store.OpenAsyncSession())

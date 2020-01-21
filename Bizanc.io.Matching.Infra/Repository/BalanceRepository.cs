@@ -14,6 +14,10 @@ namespace Bizanc.io.Matching.Infra.Repository
 {
     public class BalanceRepository : BaseRepository<Balance>, IBalanceRepository
     {
+        public BalanceRepository(string db = null)
+        : base(db)
+        { }
+
         public async Task<List<Balance>> Get()
         {
             using (var s = Store.OpenAsyncSession())

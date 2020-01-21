@@ -11,6 +11,10 @@ namespace Bizanc.io.Matching.Infra.Repository
 {
     public class WithdrawInfoRepository : BaseRepository<WithdrawInfo>, IWithdrawInfoRepository
     {
+        public WithdrawInfoRepository(string db = null)
+        : base(db)
+        { }
+
         public async Task<bool> Contains(string hashStr)
         {
             using (var s = Store.OpenAsyncSession())

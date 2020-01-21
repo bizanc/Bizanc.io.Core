@@ -10,6 +10,9 @@ namespace Bizanc.io.Matching.Infra.Repository
 {
     public class WalletRepository : BaseRepository<Wallet>, IWalletRepository
     {
+        public WalletRepository(string db = null)
+        : base(db)
+        { }
         public async Task<Wallet> Get()
         {
             using (var s = Store.OpenAsyncSession())

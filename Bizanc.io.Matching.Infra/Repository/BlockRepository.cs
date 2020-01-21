@@ -18,8 +18,8 @@ namespace Bizanc.io.Matching.Infra.Repository
 {
     public class BlockRepository : BaseRepository<Block>, IBlockRepository
     {
-        public BlockRepository()
-        : base()
+        public BlockRepository(string db = null)
+        : base(db)
         { }
 
         public async Task<bool> Contains(string hashStr)
