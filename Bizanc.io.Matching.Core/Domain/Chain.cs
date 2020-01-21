@@ -107,44 +107,64 @@ namespace Bizanc.io.Matching.Core.Domain
         public async Task<ICollection<OfferCancel>> GetOfferCancelPool() => await Pool.OfferCancelPool.GetPool();
 
 
-        public List<Block> GetBlocksNewToOld(List<Block> result = null)
+        public List<Block> GetBlocksNewToOld()
         {
-            if (result == null)
-                result = new List<Block>();
+            var result = new List<Block>();
+            var current = this;
 
-            if (CurrentBlock != null)
-                result.Add(CurrentBlock);
+            while (current != null)
+            {
+                if (current.CurrentBlock != null)
+                    result.Add(current.CurrentBlock);
 
-            if (Previous != null)
-                result = Previous.GetBlocksNewToOld(result);
+                current = current.Previous;
+            }
 
             return result;
         }
 
-        public List<Block> GetBlocksNewToOld(int skip, List<Block> result = null)
+        public List<Block> GetBlocksOldToNew()
         {
-            if (result == null)
-                result = new List<Block>();
+            var result = new List<Block>();
+            var current = this;
 
-            if (CurrentBlock != null && skip == 0)
-                result.Add(CurrentBlock);
+            while (current != null)
+            {
+                if (current.CurrentBlock != null)
+                    result.Insert(0, current.CurrentBlock);
 
-            if (Previous != null)
-                result = Previous.GetBlocksNewToOld(--skip, result);
+                current = current.Previous;
+            }
 
             return result;
         }
 
-        public List<Block> GetBlocksOldToNew(List<Block> result = null)
+        public List<Block> GetBlocksOldToNew(long offset)
         {
-            if (result == null)
-                result = new List<Block>();
+            var result = new List<Block>();
+            var current = this;
 
-            if (Previous != null)
-                result = Previous.GetBlocksOldToNew(result);
+            while (current != null && current.CurrentBlock != null && current.CurrentBlock.Header.Depth >= offset)
+            {
+                result.Insert(0, current.CurrentBlock);
 
-            if (CurrentBlock != null)
-                result.Add(CurrentBlock);
+                current = current.Previous;
+            }
+
+            return result;
+        }
+
+        public List<Block> GetBlocksOldToNew(DateTime lastDateTime)
+        {
+            var result = new List<Block>();
+            var current = this;
+
+            while (current != null && current.CurrentBlock != null && current.CurrentBlock.Header.TimeStamp >= lastDateTime)
+            {
+                result.Insert(0, current.CurrentBlock);
+
+                current = current.Previous;
+            }
 
             return result;
         }
