@@ -152,7 +152,16 @@ namespace Bizanc.io.Matching.Core.Domain
             Block block = null;
 
             if (persistPoint != null)
+            {
                 block = await blockRepository.Get(persistPoint.BlockHash);
+                int retries = 0;
+                while (block == null && retries < 100)
+                {
+                    retries++;
+                    await Task.Delay(1000 + (retries * 1000));
+                    block = await blockRepository.Get(persistPoint.BlockHash);
+                }
+            }
 
             if (block == null || !persistState)
             {
@@ -1292,10 +1301,10 @@ namespace Bizanc.io.Matching.Core.Domain
                 await commitLocker.EnterWriteLock();
                 if (of.Timestamp < chain.GetLastBlockTime() || of.Timestamp > DateTime.Now.ToUniversalTime())
                 {
-                    Log.Error("Offer with invalid timestamp "+ of.Timestamp);
+                    Log.Error("Offer with invalid timestamp " + of.Timestamp);
                     return false;
                 }
-                    
+
 
                 if (!await chain.Contains(of) && await chain.Append(of))
                 {

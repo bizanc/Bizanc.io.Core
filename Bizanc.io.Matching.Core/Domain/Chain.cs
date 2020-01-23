@@ -123,22 +123,6 @@ namespace Bizanc.io.Matching.Core.Domain
             return result;
         }
 
-        public List<Block> GetBlocksOldToNew()
-        {
-            var result = new List<Block>();
-            var current = this;
-
-            while (current != null)
-            {
-                if (current.CurrentBlock != null)
-                    result.Insert(0, current.CurrentBlock);
-
-                current = current.Previous;
-            }
-
-            return result;
-        }
-
         public List<Block> GetBlocksOldToNew(long offset)
         {
             var result = new List<Block>();

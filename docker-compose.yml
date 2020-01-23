@@ -8,6 +8,7 @@ services:
   node1:
     image: bizancio.core:latest
     build: .
+    command: Node:RavenDB=http://raven:8080
     ports:
       - 5558:5558
       - 5001:5001
