@@ -9,6 +9,7 @@ using Bizanc.io.Matching.Api.Model;
 
 namespace Bizanc.io.Matching.Api.Controllers
 {
+    [ApiController]
     [Route("api/[controller]")]
     public class QuotesController : Controller
     {

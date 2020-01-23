@@ -10,6 +10,10 @@ namespace Bizanc.io.Matching.Infra.Repository
 {
     public class TransactionRepository : BaseRepository<Transaction>, ITransactionRepository
     {
+        public TransactionRepository(string db = null)
+        : base(db)
+        { }
+
         public async Task<bool> Contains(string hashStr)
         {
             using (var s = Store.OpenAsyncSession())

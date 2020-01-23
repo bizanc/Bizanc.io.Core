@@ -7,6 +7,7 @@ using Bizanc.io.Matching.Core.Domain;
 
 namespace Bizanc.io.Matching.Api.Controllers
 {
+    [ApiController]
     [Route("api/[controller]")]
     public class StatsController : Controller
     {

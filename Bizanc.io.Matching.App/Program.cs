@@ -34,6 +34,8 @@ namespace Bizanc.io.Matching.App
         public bool PersistQueryData { get; set; } = false;
         public string ApiEndpoint { get; set; }
         public string MinerAddress { get; set; }
+
+        public string RavenDB { get; set; }
     }
     class Program
     {
@@ -57,11 +59,11 @@ namespace Bizanc.io.Matching.App
             var conf = new NodeConfig();
             configuration.GetSection("Node").Bind(conf);
 
-            var miner = new Miner(new PeerListener(conf.ListenPort), new WalletRepository(),
-            new BlockRepository(), new BalanceRepository(), new BookRepository(),
-            new DepositRepository(), new OfferRepository(), new TransactionRepository(),
-            new WithdrawalRepository(), new TradeRepository(), new WithdrawInfoRepository(),
-            new CryptoConnector(conf.OracleETHAddres, conf.OracleBTCAddres, conf.ETHEndpoint, conf.BTCEndpoint, conf.Network),conf.ListenPort, 
+            var miner = new Miner(new PeerListener(conf.ListenPort), new WalletRepository(conf.RavenDB),
+            new BlockRepository(conf.RavenDB), new BalanceRepository(conf.RavenDB), new BookRepository(conf.RavenDB),
+            new DepositRepository(conf.RavenDB), new OfferRepository(conf.RavenDB), new TransactionRepository(conf.RavenDB),
+            new WithdrawalRepository(conf.RavenDB), new TradeRepository(conf.RavenDB), new WithdrawInfoRepository(conf.RavenDB),
+            new CryptoConnector(conf.OracleETHAddres, conf.OracleBTCAddres, conf.ETHEndpoint, conf.BTCEndpoint, conf.Network), conf.ListenPort,
             conf.PersistState, conf.PersistStateInterval, conf.PersistQueryData, conf.Threads);
 
             await miner.Start(!conf.Mine, conf.MinerAddress);
@@ -83,7 +85,7 @@ namespace Bizanc.io.Matching.App
                 }
             }
 
-            if(conf.Mine)
+            if (conf.Mine)
                 await miner.StartListener();
 
             await Task.Delay(Timeout.Infinite);

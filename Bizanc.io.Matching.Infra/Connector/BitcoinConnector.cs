@@ -35,7 +35,7 @@ namespace Bizanc.io.Matching.Infra.Connector
         {
             this.depositStream = depositStream;
             this.withdrawStream = withdrawStream;
-            this.oracleAddress = TrackedSource.Create(new BitcoinPubKeyAddress(oracleAddress));
+            this.oracleAddress = TrackedSource.Create(new BitcoinPubKeyAddress(oracleAddress, Network.Main));
             this.network = network == "testnet" ? NetworkType.Testnet : NetworkType.Mainnet;
             client = new ExplorerClient(new NBXplorerNetworkProvider(this.network).GetBTC(), new Uri(endpoint));
             client.SetNoAuth();
@@ -138,7 +138,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 {
                     var op = await client.GetTransactionAsync(oracleAddress, tx, cancel);
 
-                    if (op.BalanceChange < Money.Zero)
+                    if (((Money)op.BalanceChange) < Money.Zero)
                     {
                         await withdrawStream.Writer.WriteAsync(ProcessWithdraw(op));
                         return;
@@ -163,14 +163,14 @@ namespace Bizanc.io.Matching.Infra.Connector
             var withdraws = new List<WithdrawInfo>();
 
             foreach (var op in txOperations)
-                if (op.BalanceChange > Money.Zero)
+                if (((Money)op.BalanceChange) > Money.Zero)
                 {
                     if (op.Confirmations >= 3)
                         deposits.Add(ProcessDeposit(op));
                     else
                         WaitConfirmations(op.TransactionId);
                 }
-                else if (op.BalanceChange < Money.Zero)
+                else if (((Money)op.BalanceChange) < Money.Zero)
                     withdraws.Add(ProcessWithdraw(op));
 
             return (deposits, withdraws);
@@ -184,7 +184,7 @@ namespace Bizanc.io.Matching.Infra.Connector
                 deposit.TargetWallet = GetScriptString(transaction.Transaction);
                 deposit.Asset = "BTC";
                 deposit.AssetId = "0x0";
-                deposit.Quantity = transaction.BalanceChange.ToDecimal(MoneyUnit.BTC);
+                deposit.Quantity = ((Money)transaction.BalanceChange).ToDecimal(MoneyUnit.BTC);
                 deposit.TxHash = transaction.TransactionId.ToString();
                 deposit.Timestamp = DateTime.Now;
                 deposit.BlockNumber = transaction.Height.ToString();

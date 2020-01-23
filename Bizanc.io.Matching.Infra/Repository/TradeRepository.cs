@@ -11,6 +11,9 @@ namespace Bizanc.io.Matching.Infra.Repository
 {
     public class TradeRepository : BaseRepository<Trade>, ITradeRepository
     {
+        public TradeRepository(string db = null)
+        : base(db)
+        { }
         public async Task<ChannelReader<Trade>> ListAscending(string asset, DateTime from)
         {
             using (var s = Store.OpenAsyncSession())

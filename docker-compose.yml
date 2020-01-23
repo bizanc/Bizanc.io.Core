@@ -1,14 +1,22 @@
 version: '2.1'
 
 services:
+  raven:
+    image: ravendb/ravendb
+    volumes:
+      - "biznode_datadir1:/opt/RavenDB/Server/RavenData"
   node1:
     image: bizancio.core:latest
     build: .
+    command: Node:RavenDB=http://raven:8080
     ports:
       - 5558:5558
       - 5001:5001
-    volumes:
-      - "biznode_datadir1:/app/RavenDB"
+    depends_on: 
+      - raven
+    links: 
+      - raven
+  
   # node2:
   #   image: bizancio.core:latest
   #   build: .

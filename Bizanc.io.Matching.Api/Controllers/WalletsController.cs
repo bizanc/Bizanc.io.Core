@@ -10,6 +10,7 @@ using System.Net;
 
 namespace Bizanc.io.Matching.Api.Controllers
 {
+    [ApiController]
     [Route("api/[controller]")]
     public class WalletsController : Controller
     {
