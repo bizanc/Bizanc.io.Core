@@ -68,8 +68,6 @@ namespace Bizanc.io.Matching.App
 
             await miner.Start(!conf.Mine, conf.MinerAddress);
 
-            StartApi(miner, conf.ApiEndpoint);
-
             if (!string.IsNullOrEmpty(conf.SeedAddress) && conf.SeedPort > 0)
             {
                 try
@@ -85,8 +83,8 @@ namespace Bizanc.io.Matching.App
                 }
             }
 
-            if (conf.Mine)
-                await miner.StartListener();
+            StartApi(miner, conf.ApiEndpoint);
+            await miner.StartListener();
 
             await Task.Delay(Timeout.Infinite);
         }
